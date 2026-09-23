@@ -122,7 +122,7 @@ window.APP_CONFIG = {
       roleLabel: 'Tổ trưởng chuyên môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Vật lí', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👨‍🏫'
     },
     {
@@ -136,7 +136,7 @@ window.APP_CONFIG = {
       roleLabel: 'Tổ phó chuyên môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Hóa học', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👨‍💼'
     },
     {
@@ -150,7 +150,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Sinh học', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👩‍🏫'
     },
     {
@@ -164,7 +164,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Vật lí', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👩‍🏫'
     },
     {
@@ -178,7 +178,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Hóa học', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👩‍🏫'
     },
     {
@@ -192,7 +192,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Sinh học', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Công nghệ'],
       avatar: '👩‍🏫'
     },
     {
@@ -206,7 +206,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Công nghệ', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👩‍🏫'
     },
     {
@@ -220,7 +220,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Công nghệ', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên', 'Công nghệ'],
       avatar: '👩‍🏫'
     },
     {
@@ -234,7 +234,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Vật lí', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Công nghệ'],
       avatar: '👩‍🏫'
     },
     {
@@ -248,7 +248,7 @@ window.APP_CONFIG = {
       roleLabel: 'Giáo viên bộ môn',
       departmentId: 'To_KHTN_CN',
       departmentName: 'Tổ Khoa học Tự nhiên - Công nghệ',
-      subjects: ['Khoa học tự nhiên', 'Hóa học', 'Hoạt động trải nghiệm hướng nghiệp'],
+      subjects: ['Khoa học tự nhiên'],
       avatar: '👩‍🏫'
     },
     {

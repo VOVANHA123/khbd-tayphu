@@ -4567,6 +4567,18 @@
           this.checkCloudPulse();
         }
       }, 6000);
+
+      // Khởi tạo thanh thước trượt ngang cố định đáy màn hình
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.initStickyScrollbar());
+      } else {
+        setTimeout(() => this.initStickyScrollbar(), 120);
+      }
+
+      // Tự động cập nhật giao diện phân quyền khi chuyển đổi tài khoản
+      window.addEventListener('khbd:user-changed', () => {
+        setTimeout(() => this.renderEquipmentView(), 80);
+      });
     }
 
     initFirebase() {
@@ -4970,6 +4982,16 @@
         return isKHTN;
       });
 
+      // Nếu là Giáo viên thường: Chỉ lọc ra các lượt mượn của chính mình (không thấy các GV khác)
+      if (!this.isAdminOrLeader() && user) {
+        list = list.filter(r => {
+          const matchName = r.teacherName && user.name && r.teacherName.trim().toLowerCase() === user.name.trim().toLowerCase();
+          const matchId = r.teacherId && user.id && r.teacherId === user.id;
+          const matchUsername = r.teacherUsername && user.username && r.teacherUsername === user.username;
+          return matchName || matchId || matchUsername;
+        });
+      }
+
       if (this.currentFilterWeek !== 'ALL') {
         list = list.filter(r => String(r.week) === String(this.currentFilterWeek));
       }
@@ -5023,6 +5045,9 @@
         if (secCatalog) secCatalog.style.display = 'none';
         if (secTracking) secTracking.style.display = 'block';
       }
+
+      // Cập nhật lại thanh thước trượt ngang cho tab mới
+      setTimeout(() => this.updateStickyScrollbar(), 60);
     }
 
     // Lọc danh sách danh mục 318 thiết bị
@@ -5145,6 +5170,9 @@
           </tr>
         `;
       }).join('');
+
+      // Cập nhật thanh trượt ngang cho bảng danh mục
+      setTimeout(() => this.updateStickyScrollbar(), 60);
     }
 
     // Cập nhật giao diện Tab Thiết bị
@@ -5152,10 +5180,46 @@
       const container = document.getElementById('view-equipment');
       if (!container) return;
 
+      const user = window.AppStorage ? window.AppStorage.getCurrentUser() : null;
+      const isManager = this.isAdminOrLeader();
+
+      // Kiểm soát hiển thị vai trò Quản trị viên / Tổ trưởng vs Giáo viên bộ môn
+      const heroBanner = document.getElementById('eq-hero-banner');
+      const kpiContainer = document.getElementById('eq-kpi-container');
+      const teacherHeader = document.getElementById('eq-teacher-header');
+      const btnAdminAdd = document.getElementById('btn-admin-add-equipment');
+      const teacherFilterEl = document.getElementById('eq-filter-teacher');
+      const trackingTitle = document.getElementById('eq-tracking-title');
+      const trackingSubtitle = document.getElementById('eq-tracking-subtitle');
+
+      if (isManager) {
+        if (heroBanner) heroBanner.style.display = 'flex';
+        if (kpiContainer) kpiContainer.style.display = 'grid';
+        if (teacherHeader) teacherHeader.style.display = 'none';
+        if (btnAdminAdd) btnAdminAdd.style.display = 'inline-flex';
+        if (teacherFilterEl) teacherFilterEl.style.display = '';
+        if (trackingTitle) trackingTitle.innerHTML = `<span>📖 Sổ Theo Dõi Sử Dụng Thiết Bị Dạy Học</span><span class="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 font-semibold border border-teal-200">Tổ KHTN - CN</span>`;
+        if (trackingSubtitle) trackingSubtitle.innerText = 'Ghi nhận đầy đủ tiết dạy, lớp học, kế hoạch bài dạy và tình trạng hoàn trả của toàn trường';
+      } else {
+        // Tài khoản GV: ẨN trường thông tin và banner như hình đính kèm!
+        if (heroBanner) heroBanner.style.display = 'none';
+        if (kpiContainer) kpiContainer.style.display = 'none';
+        if (teacherHeader) {
+          teacherHeader.style.display = 'flex';
+          const tName = document.getElementById('eq-teacher-welcome');
+          if (tName && user) {
+            tName.innerText = `Thầy/Cô: ${user.name || 'Giáo viên'}`;
+          }
+        }
+        if (btnAdminAdd) btnAdminAdd.style.display = 'none';
+        if (teacherFilterEl) teacherFilterEl.style.display = 'none';
+        if (trackingTitle) trackingTitle.innerHTML = `<span>📖 Sổ Theo Dõi Mượn - Trả Cá Nhân</span><span class="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 font-semibold border border-teal-200">${user ? user.name : 'Giáo viên'}</span>`;
+        if (trackingSubtitle) trackingSubtitle.innerText = `Danh sách các thiết bị Thầy/Cô (${user ? user.name : ''}) đã đăng ký mượn phục vụ giảng dạy`;
+      }
+
       // Luôn kết xuất Bảng Danh mục 318 thiết bị
       this.renderEquipmentCatalogTable();
 
-      const user = window.AppStorage ? window.AppStorage.getCurrentUser() : null;
       const allEquipments = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
       const records = this.getFilteredRecords();
 
@@ -5187,11 +5251,10 @@
       }
 
       // Populate dropdown giáo viên
-      const teacherSelect = document.getElementById('eq-filter-teacher');
-      if (teacherSelect) {
-        const currentVal = teacherSelect.value;
+      if (teacherFilterEl && isManager) {
+        const currentVal = teacherFilterEl.value;
         const teacherNames = Array.from(new Set(this.borrowRecords.map(r => r.teacherName).filter(Boolean)));
-        teacherSelect.innerHTML = `<option value="ALL">-- Tất cả giáo viên KHTN-CN --</option>` +
+        teacherFilterEl.innerHTML = `<option value="ALL">-- Tất cả giáo viên KHTN-CN --</option>` +
           teacherNames.map(name => `<option value="${name}" ${name === currentVal ? 'selected' : ''}>${name}</option>`).join('');
       }
 
@@ -5211,8 +5274,6 @@
         `;
         return;
       }
-
-      const isManager = this.isAdminOrLeader();
 
       tbody.innerHTML = records.map((r, index) => {
         const isBorrowed = r.status === 'Đang mượn';
@@ -5292,6 +5353,9 @@
           </tr>
         `;
       }).join('');
+
+      // Cập nhật thanh trượt ngang cho bảng mượn trả
+      setTimeout(() => this.updateStickyScrollbar(), 60);
     }
 
     // Mở modal báo trả
@@ -5553,60 +5617,49 @@
     generateTeacherBorrowStats(records) {
       const statsMap = new Map();
 
-      // Danh sách giáo viên chuẩn của Tổ KHTN - CN
+      // Danh sách đầy đủ 10 giáo viên trong tổ KHTN - Công nghệ theo đúng môn phụ trách
       const defaultTeachers = [
-        { name: 'Võ Văn Hà', subject: 'KHTN (Vật lý - Hóa học)' },
-        { name: 'Nguyễn Sỹ Tuấn', subject: 'KHTN (Sinh học)' },
-        { name: 'Huỳnh Thị Thúy Kiều', subject: 'Công nghệ' }
+        { name: 'Võ Văn Hà', subject: 'KHTN' },
+        { name: 'Trương Thiện Tánh', subject: 'KHTN' },
+        { name: 'Nguyễn Thị Phước Hoài', subject: 'KHTN' },
+        { name: 'Châu Thị Cẩm Hồng', subject: 'KHTN' },
+        { name: 'Nguyễn Thị Bích Tuyền', subject: 'KHTN' },
+        { name: 'Trương Thị Thủy Tiên', subject: 'KHTN' },
+        { name: 'Nguyễn Thị Thu Hà', subject: 'KHTN' },
+        { name: 'Đặng Thị Ngọc Yến', subject: 'KHTN - Công nghệ' },
+        { name: 'Lê Thị Ngọc Giàu', subject: 'Công nghệ' },
+        { name: 'Võ Thị Út Thủy', subject: 'Công nghệ' }
       ];
 
-      // Nạp từ AppStorage nếu có thêm tài khoản khác
-      if (window.AppStorage && typeof window.AppStorage.getUsers === 'function') {
-        const allUsers = window.AppStorage.getUsers() || [];
-        allUsers.forEach(u => {
-          if (u.name && !statsMap.has(u.name)) {
-            statsMap.set(u.name, {
-              teacherName: u.name,
-              subject: u.subject || u.mon || 'Khoa học tự nhiên',
-              khtnCount: 0,
-              cnCount: 0,
-              totalCount: 0,
-              returnedCount: 0,
-              borrowingCount: 0
-            });
-          }
-        });
-      }
-
+      // Khởi tạo trước đúng thứ tự 10 giáo viên
       defaultTeachers.forEach(t => {
-        if (!statsMap.has(t.name)) {
-          statsMap.set(t.name, {
-            teacherName: t.name,
-            subject: t.subject,
-            khtnCount: 0,
-            cnCount: 0,
-            totalCount: 0,
-            returnedCount: 0,
-            borrowingCount: 0
-          });
-        }
+        statsMap.set(t.name, {
+          teacherName: t.name,
+          subject: t.subject,
+          khtnCount: 0,
+          cnCount: 0,
+          totalCount: 0,
+          returnedCount: 0,
+          borrowingCount: 0
+        });
       });
 
       // Thống kê chi tiết từ các bản ghi mượn
       records.forEach(r => {
-        const teacherName = r.teacherName || 'Giáo viên khác';
-        if (!statsMap.has(teacherName)) {
-          statsMap.set(teacherName, {
+        const teacherName = r.teacherName || 'Chưa xác định';
+        let s = statsMap.get(teacherName);
+        if (!s) {
+          s = {
             teacherName: teacherName,
-            subject: r.subject || 'KHTN - Công nghệ',
+            subject: r.subject || 'KHTN',
             khtnCount: 0,
             cnCount: 0,
             totalCount: 0,
             returnedCount: 0,
             borrowingCount: 0
-          });
+          };
+          statsMap.set(teacherName, s);
         }
-        const s = statsMap.get(teacherName);
         s.totalCount += 1;
         const sub = (r.subject || '').toLowerCase();
         if (sub.includes('công nghệ')) {
@@ -6175,6 +6228,128 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "So_Theo_Doi_TB_KHTN_CN");
       XLSX.writeFile(wb, "So_Theo_Doi_Thiet_Bi_KHTN_CN_THCS_Tay_Phu_2026.xlsx");
+    }
+
+    // =========================================================================
+    // THANH THƯỚC TRƯỢT NGANG CỐ ĐỊNH PHÍA DƯỚI MÀN HÌNH (STICKY HORIZONTAL SCROLL)
+    // =========================================================================
+    initStickyScrollbar() {
+      const scrollBar = document.getElementById('sticky-horizontal-scrollbar');
+      const track = document.getElementById('hscroll-track');
+      if (!scrollBar || !track) return;
+
+      this._isSyncingScroll = false;
+
+      // Lắng nghe sự kiện trượt trên thanh cố định đáy màn hình
+      track.addEventListener('scroll', () => {
+        if (this._isSyncingScroll) return;
+        const container = this.getActiveScrollContainer();
+        if (container) {
+          this._isSyncingScroll = true;
+          container.scrollLeft = track.scrollLeft;
+          this._isSyncingScroll = false;
+          this.updateHScrollPercent(container);
+        }
+      });
+
+      // Đồng bộ khi đổi kích thước cửa sổ hoặc cuộn trang
+      window.addEventListener('resize', () => this.updateStickyScrollbar());
+      window.addEventListener('scroll', () => this.updateStickyScrollbar(), { passive: true });
+
+      // Lắng nghe cuộn ngang trên 2 container bảng
+      const catContainer = document.getElementById('eq-catalog-table-container');
+      const trkContainer = document.getElementById('eq-tracking-table-container');
+
+      [catContainer, trkContainer].forEach(c => {
+        if (c) {
+          c.addEventListener('scroll', () => {
+            if (this._isSyncingScroll) return;
+            this._isSyncingScroll = true;
+            track.scrollLeft = c.scrollLeft;
+            this._isSyncingScroll = false;
+            this.updateHScrollPercent(c);
+          }, { passive: true });
+        }
+      });
+
+      this.updateStickyScrollbar();
+    }
+
+    getActiveScrollContainer() {
+      // 1. Kiểm tra modal Sổ Sư Phạm A4 nếu đang mở
+      const printModal = document.getElementById('modal-print-equipment-report');
+      if (printModal && printModal.classList.contains('active')) {
+        const paper = document.getElementById('modal-print-report-paper');
+        if (paper) return paper.parentElement || paper;
+      }
+
+      // 2. Tab Thiết Bị đang hiển thị
+      const viewEq = document.getElementById('view-equipment');
+      if (viewEq && !viewEq.classList.contains('hidden')) {
+        if (this.activeSubTab === 'catalog') {
+          return document.getElementById('eq-catalog-table-container');
+        } else {
+          return document.getElementById('eq-tracking-table-container');
+        }
+      }
+
+      // 3. Fallback container
+      return document.getElementById('eq-catalog-table-container') || document.getElementById('eq-tracking-table-container');
+    }
+
+    updateStickyScrollbar() {
+      const scrollBar = document.getElementById('sticky-horizontal-scrollbar');
+      const track = document.getElementById('hscroll-track');
+      const dummy = document.getElementById('hscroll-dummy');
+      if (!scrollBar || !track || !dummy) return;
+
+      const container = this.getActiveScrollContainer();
+      if (!container) {
+        scrollBar.style.display = 'none';
+        return;
+      }
+
+      // Chỉ hiển thị khi bảng rộng hơn chiều ngang hiển thị của màn hình
+      const hasOverflow = container.scrollWidth > (container.clientWidth + 10);
+      if (hasOverflow) {
+        scrollBar.style.display = 'flex';
+        dummy.style.width = container.scrollWidth + 'px';
+        if (!this._isSyncingScroll) {
+          this._isSyncingScroll = true;
+          track.scrollLeft = container.scrollLeft;
+          this._isSyncingScroll = false;
+        }
+        this.updateHScrollPercent(container);
+      } else {
+        scrollBar.style.display = 'none';
+      }
+    }
+
+    updateHScrollPercent(container) {
+      const pctEl = document.getElementById('hscroll-percent');
+      if (!pctEl || !container) return;
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      if (maxScroll <= 0) {
+        pctEl.innerText = '100%';
+        return;
+      }
+      const pct = Math.round((container.scrollLeft / maxScroll) * 100);
+      pctEl.innerText = `${Math.min(100, Math.max(0, pct))}%`;
+    }
+
+    scrollActiveTable(direction) {
+      const container = this.getActiveScrollContainer();
+      if (!container) return;
+      const step = 280;
+      if (direction === 'left') {
+        container.scrollBy({ left: -step, behavior: 'smooth' });
+      } else if (direction === 'right') {
+        container.scrollBy({ left: step, behavior: 'smooth' });
+      } else if (direction === 'start') {
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else if (direction === 'end') {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      }
     }
   }
 
