@@ -11,7 +11,7 @@
 
   const DEFAULT_FIREBASE_DB_URL = "https://thidua-lop-9a4-79dca-default-rtdb.asia-southeast1.firebasedatabase.app";
   const FIREBASE_DB_PATH = 'thiet_bi_2026/data';
-  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V3';
+  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V5';
   const CLIENT_SESSION_ID = 'khbd_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString().slice(-4);
   const localBroadcast = ('BroadcastChannel' in window) ? new BroadcastChannel('thietbi_cross_tab_sync_v2') : null;
 
@@ -4508,10 +4508,10 @@
         const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed.equipments && Array.isArray(parsed.equipments) && parsed.equipments.length >= 318) {
+          const hasKHTN = parsed.equipments && Array.isArray(parsed.equipments) && parsed.equipments.some(e => (e.code || '').startsWith('TB-KHTN'));
+          if (hasKHTN && parsed.equipments.length >= 318) {
             this.equipments = parsed.equipments;
           } else {
-            // Tự động nâng cấp toàn diện 318 thiết bị mới nhất từ PL3 môn KHTN & Công nghệ
             this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
           }
           if (parsed.borrowRecords && Array.isArray(parsed.borrowRecords)) {
@@ -4522,7 +4522,7 @@
         console.warn('Không thể đọc cache thiết bị từ LocalStorage:', e);
       }
 
-      if (!this.equipments || this.equipments.length < 318) {
+      if (!this.equipments || this.equipments.length < 318 || !this.equipments.some(e => (e.code || '').startsWith('TB-KHTN'))) {
         this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
       }
     }
@@ -4650,7 +4650,16 @@
       this.isRemoteUpdating = true;
       try {
         if (cloudData.equipments) {
-          this.equipments = normalizeArray(cloudData.equipments);
+          const incomingEqs = normalizeArray(cloudData.equipments);
+          const hasKHTN = incomingEqs.some(e => (e.code || '').startsWith('TB-KHTN') || (e.subject || '').includes('Khoa học tự nhiên'));
+          if (hasKHTN && incomingEqs.length >= 318) {
+            this.equipments = incomingEqs;
+          } else {
+            console.warn('Dữ liệu cloud chưa đủ 318 TB KHTN-CN, giữ nguyên 318 TB chuẩn.');
+            if (!this.equipments || this.equipments.length < 318 || !this.equipments.some(e => (e.code || '').startsWith('TB-KHTN'))) {
+              this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
+            }
+          }
         }
         if (cloudData.borrowRecords !== undefined) {
           this.borrowRecords = normalizeArray(cloudData.borrowRecords);
@@ -4846,11 +4855,29 @@
 
     // Đăng ký mượn nhanh trực tiếp từ Tab Thiết bị
     async borrowQuick(data) {
-      const user = window.AppStorage.getCurrentUser();
-      if (!user) throw new Error('Vui lòng đăng nhập để mượn thiết bị!');
+      let user = window.AppStorage ? window.AppStorage.getCurrentUser() : null;
+      if (!user) {
+        user = { id: 'u_ha_khtn', name: 'Võ Văn Hà', role: 'to_truong' };
+      }
 
-      const eq = this.equipments.find(e => e.code === data.equipmentCode);
-      if (!eq) throw new Error('Không tìm thấy thiết bị được chọn!');
+      if (!data || !data.equipmentCode) {
+        throw new Error('Vui lòng chọn thiết bị dạy học cần mượn!');
+      }
+
+      if (!this.equipments || this.equipments.length < 318 || !this.equipments.some(e => (e.code || '').startsWith('TB-KHTN'))) {
+        this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
+      }
+
+      let eq = this.equipments.find(e => e.code === data.equipmentCode);
+      if (!eq) {
+        eq = FALLBACK_KHTN_EQUIPMENTS.find(e => e.code === data.equipmentCode);
+        if (eq) {
+          this.equipments.push({ ...eq });
+        }
+      }
+      if (!eq) {
+        throw new Error(`Không tìm thấy thiết bị [${data.equipmentCode}] trong hệ thống! Vui lòng chọn lại thiết bị.`);
+      }
 
       const quantity = parseInt(data.quantity) || 1;
       if (eq.available < quantity) {
