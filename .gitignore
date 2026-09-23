@@ -1,0 +1,21 @@
+# Thư mục hệ thống & cache
+.vercel
+.env*
+.firebase
+node_modules/
+scratch/
+
+# Thư mục tài liệu nội bộ
+PL3/
+**/PL3/
+
+# Tệp tài liệu Word, Excel, PDF nội bộ
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# File tạm Microsoft Office
+~$*

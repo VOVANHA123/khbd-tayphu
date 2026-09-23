@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Quản lý & Kiểm tra Kế hoạch bài dạy (Giáo án) - THCS Tây Phú</title>
+  
+  <!-- Meta & Icons -->
+  <meta name="description" content="Hệ thống Quản lý và Kiểm tra Kế hoạch bài dạy (KHBD / Giáo án) kết nối tự động Google Drive dành cho trường THCS Tây Phú">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase Realtime Database SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white pb-16">
+
+  <!-- ================= TOPBAR & HEADER ================= -->
+  <header class="glass-nav sticky top-0 z-40 px-4 lg:px-8 py-2.5 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl shadow-md font-heading font-bold">
+            📚
+          </div>
+          <div>
+            <div class="text-[11px] font-bold tracking-wider text-blue-700 uppercase">Trường THCS Tây Phú</div>
+            <h1 class="text-base font-bold text-slate-900 font-heading leading-tight">QUẢN LÝ KẾ HOẠCH BÀI DẠY</h1>
+          </div>
+        </div>
+
+        <div id="cloud-mode-indicator" class="md:hidden">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Center & Right Controls -->
+      <div class="flex flex-wrap items-center justify-between md:justify-end gap-2.5 w-full md:w-auto">
+        <div id="cloud-mode-indicator" class="hidden md:block">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Academic Info Pill (35 Weeks) -->
+        <div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+          <span>📅 Năm học 2026 - 2027</span>
+          <span class="text-slate-300">|</span>
+          <span class="text-blue-600">35 Tuần</span>
+        </div>
+
+        <!-- Latest Version Badge -->
+        <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-200 shadow-sm" title="Phiên bản mới nhất: v2.5.2 - Đổi mật khẩu đa thiết bị & Đồng bộ đám mây">
+          <span>🚀 v2.5.2</span>
+        </div>
+
+        <!-- Real-time Sync Button (Đồng bộ thời gian thực) -->
+        <button id="btn-realtime-sync" onclick="window.AppController.triggerManualSync()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 shadow-sm transition" title="Bấm để đồng bộ dữ liệu mới nhất từ Google Drive & Sheets theo thời gian thực">
+          <span class="sync-icon text-sm">🔄</span>
+          <span id="sync-status-text" class="hidden md:inline">Đồng bộ</span>
+        </button>
+
+        <!-- Quick Drive Link & Status Indicator -->
+        <a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer" onclick="window.AppController.openUserDrive(); return false;" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-sm transition" title="Mở Google Drive của Thầy/Cô">
+          <svg class="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 24 24"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5L7.71 3.5zm4.86 6.5l-3.43 6h13.72l3.43-6H12.57zm7.42-6.5h-6.86l3.43 6h6.86l-3.43-6z"/></svg>
+          <span class="hidden sm:inline">Google Drive</span>
+        </a>
+
+        <div id="header-drive-status" onclick="window.AppController.switchTab('settings')" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer hover:bg-amber-100 transition" title="Bấm để xem hoặc cấu hình kết nối Google Drive">
+          <span id="header-drive-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="header-drive-text">Drive: Chưa kết nối</span>
+        </div>
+
+        <!-- CHỈ HIỆN TÀI KHOẢN ĐANG ĐĂNG NHẬP (Không dùng dropdown tất cả tài khoản) -->
+        <div id="header-account-badge" class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1 shadow-sm">
+          <span id="header-user-avatar" class="text-lg">👨‍🏫</span>
+          <div class="text-left">
+            <div class="flex items-center gap-1.5">
+              <span id="header-user-name" class="font-bold text-xs text-slate-900 leading-tight">Thầy Võ Văn Hà</span>
+              <span id="header-user-username" class="text-[10px] text-slate-400 font-mono">@vovanha</span>
+            </div>
+            <div id="header-user-role" class="text-[10px] text-blue-600 font-semibold leading-tight">Tổ trưởng chuyên môn</div>
+          </div>
+
+          <div class="flex items-center gap-1 ml-1 border-l border-slate-100 pl-1.5">
+            <button onclick="window.AppController.openChangePasswordModal()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition" title="Đổi mật khẩu cá nhân">
+              🔒
+            </button>
+            <button onclick="window.AppController.handleLogout()" class="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition" title="Đăng xuất tài khoản">
+              🚪
+            </button>
+          </div>
+        </div>
+
+        <!-- Button Login (chỉ hiện khi chưa đăng nhập) -->
+        <button id="btn-open-login-modal" onclick="window.AppController.openLoginModal(true)" class="hidden px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition items-center gap-1.5">
+          <span>🔑 Đăng nhập</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER VỚI CỘT ĐIỀU HƯỚNG BÊN TRÁI (SIDEBAR) ================= -->
+  <main class="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 mt-4 md:mt-6">
+
+    <div class="flex flex-col lg:flex-row gap-5 items-start">
+
+      <!-- ================= SIDEBAR CỘT ĐIỀU HƯỚNG BÊN TRÁI ================= -->
+      <aside class="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-16 z-30">
+        
+        <!-- CARD MENU CHÍNH -->
+        <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-3.5 space-y-3">
+          <div class="px-2 py-1 flex items-center justify-between border-b border-slate-100 pb-2">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Danh Mục Điều Hướng</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200/60">Tổ KHTN-CN</span>
+          </div>
+
+          <!-- Vertical Navigation Buttons -->
+          <nav class="space-y-1.5" id="sidebar-main-nav">
+            <!-- Tab 1: Giáo viên -->
+            <button id="nav-tab-teacher" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left bg-blue-600 text-white shadow-md shadow-blue-500/20 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">👨‍🏫</span>
+                <div>
+                  <div class="leading-tight">Kế hoạch của tôi</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-blue-100 mt-0.5">Nộp & quản lý giáo án</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-white/80">❯</span>
+            </button>
+
+            <!-- Tab 2: Tổ trưởng / Tổ phó -->
+            <button id="nav-tab-reviewer" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">📋</span>
+                <div>
+                  <div class="leading-tight">Kiểm tra & Duyệt</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Tổ trưởng & Tổ phó</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
+
+            <!-- Tab 3: Thiết bị dạy học -->
+            <button id="nav-tab-equipment" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">🔬</span>
+                <div>
+                  <div class="leading-tight">Thiết bị Dạy học</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">315+ TB KHTN & CN 6-9</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
+
+            <!-- Tab 4: Báo cáo & Quản trị -->
+            <button id="nav-tab-admin" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">📊</span>
+                <div>
+                  <div class="leading-tight">Báo cáo & Quản trị</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Thống kê toàn trường & GV</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
+
+            <!-- Tab 5: Cài đặt Google Drive (chỉ Admin) -->
+            <button id="nav-tab-settings" style="display: none;" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">⚙️</span>
+                <div>
+                  <div class="leading-tight">Cấu hình Google Drive</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Quản trị viên hệ thống</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- WIDGET TIẾN ĐỘ NĂM HỌC & TUẦN HIỆN TẠI -->
+        <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-wider text-indigo-300 uppercase">Tiến Độ Năm Học</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-400/30">2026 - 2027</span>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-baseline justify-between">
+              <div class="text-lg font-bold font-heading text-white">Tuần 3 <span class="text-xs font-normal text-slate-300">/ 35 Tuần</span></div>
+              <span class="text-xs font-bold text-emerald-400">Học kỳ I</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+              <div class="bg-gradient-to-r from-blue-400 to-emerald-400 h-2 rounded-full" style="width: 8.5%"></div>
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+              <span>Đã hoàn thành: 8.5%</span>
+              <span>Còn 32 tuần</span>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+            <a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer" onclick="window.AppController.openUserDrive(); return false;" class="text-blue-300 hover:text-white flex items-center gap-1 transition">
+              <span>📁 Google Drive</span>
+            </a>
+            <button onclick="window.AppController.triggerManualSync()" class="text-indigo-300 hover:text-white flex items-center gap-1 transition">
+              <span>🔄 Đồng bộ</span>
+            </button>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- ================= VÙNG NỘI DUNG CHÍNH (RIGHT MAIN CONTENT) ================= -->
+      <div class="flex-1 min-w-0 w-full space-y-6">
+
+    <!-- ================= VIEW 1: TEACHER PORTAL ================= -->
+    <section id="view-teacher" class="space-y-6">
+      
+      <!-- Welcome & Upload Banner -->
+      <div class="glass-panel p-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-medium backdrop-blur-sm mb-2">
+            <span>✨ Không gian nộp giáo án trực tuyến • 35 Tuần</span>
+          </div>
+          <h2 class="text-xl md:text-2xl font-bold font-heading">
+            Xin chào, <span id="teacher-hero-name">Thầy Cô</span>
+          </h2>
+          <p id="teacher-hero-sub" class="text-blue-100 text-xs md:text-sm mt-1">Tổ Khoa học Tự nhiên - Công nghệ • Trường THCS Tây Phú</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button id="btn-clear-all-plans" onclick="window.UITeacher.clearAllPlansPrompt()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-rose-600 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5" title="Chỉ dành cho Tổ trưởng/BGH xóa dữ liệu mẫu" style="display: none;">
+            <span>🗑️ Xóa toàn bộ KHBD mẫu</span>
+          </button>
+          <button onclick="window.UITeacher.openUploadModal()" class="px-5 py-2.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs md:text-sm shadow-md transition-all transform hover:-translate-y-0.5 flex items-center gap-2 shrink-0">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Nộp Kế hoạch bài dạy mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-card p-4 border-l-4 border-l-blue-500">
+          <div class="text-slate-500 text-xs font-medium">Tổng số bài đã nộp</div>
+          <div id="teacher-kpi-total" class="text-2xl font-bold text-slate-800 font-heading mt-1">0</div>
+          <div class="text-[11px] text-slate-400 mt-0.5">Niên khóa 2026 - 2027</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-emerald-500">
+          <div class="text-slate-500 text-xs font-medium">Đã phê duyệt đạt</div>
+          <div id="teacher-kpi-approved" class="text-2xl font-bold text-emerald-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-emerald-600 font-semibold mt-0.5">Đã ký duyệt điện tử</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-amber-500">
+          <div class="text-slate-500 text-xs font-medium">Đang chờ tổ trưởng/tổ phó duyệt</div>
+          <div id="teacher-kpi-pending" class="text-2xl font-bold text-amber-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-amber-600 mt-0.5">Đã gửi yêu cầu kiểm tra</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-rose-500">
+          <div class="text-slate-500 text-xs font-medium">Cần chỉnh sửa / Bổ sung</div>
+          <div id="teacher-kpi-revision" class="text-2xl font-bold text-rose-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-rose-600 font-semibold mt-0.5">Có nhận xét từ Tổ chuyên môn</div>
+        </div>
+      </div>
+
+      <!-- THÔNG BÁO YÊU CẦU CHỈNH SỬA TỪ TRỢ LÝ AI & TỔ CHUYÊN MÔN -->
+      <div id="teacher-ai-alert-container" class="space-y-3" style="display: none;">
+        <!-- Tự động kết xuất bởi window.UITeacher.renderTeacherDashboard() -->
+      </div>
+
+      <!-- Table Section -->
+      <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-4 md:p-5 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base font-heading">Danh sách Kế hoạch bài dạy của Thầy/Cô</h3>
+            <p class="text-xs text-slate-500">Tự động đồng bộ và lưu vào Google Drive cá nhân theo cấu trúc 35 Tuần</p>
+          </div>
+          <button onclick="window.UITeacher.clearAllPlansPrompt()" class="text-xs text-rose-600 hover:text-rose-800 font-semibold underline">
+            Làm trống danh sách (xóa hết)
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th class="px-4 py-3">Tuần</th>
+                <th class="px-4 py-3">Tiêu đề bài dạy / Môn học</th>
+                <th class="px-4 py-3">Tệp đính kèm</th>
+                <th class="px-4 py-3">Thời gian nộp</th>
+                <th class="px-4 py-3">Trạng thái</th>
+                <th class="px-4 py-3 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-plans-tbody" class="divide-y divide-slate-100 text-sm">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 2: REVIEWER PORTAL (TỔ TRƯỞNG & TỔ PHÓ) ================= -->
+    <section id="view-reviewer" class="hidden space-y-6">
+      
+      <!-- Reviewer Header -->
+      <div class="glass-panel p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold mb-1.5">
+            <span>🛡️ Cổng Kiểm tra & Ký duyệt Chuyên môn (Tổ trưởng & Tổ phó)</span>
+          </div>
+          <h2 class="text-xl font-bold font-heading text-slate-900">Kiểm tra Kế hoạch Bài dạy Tổ bộ môn</h2>
+          <p class="text-xs text-slate-500">Đánh giá theo chuẩn Công văn 5512/BGDĐT và Ký duyệt điện tử trực tiếp</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <div class="text-xs text-slate-500 font-medium">Chờ duyệt trong tổ:</div>
+            <div id="reviewer-kpi-pending" class="text-xl font-extrabold text-amber-600 font-heading">0 bài</div>
+          </div>
+          <button id="btn-batch-ai-review" onclick="window.UIReviewer.openAiBatchModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition flex items-center gap-2">
+            <span class="text-lg">🤖</span>
+            <div class="text-left">
+              <div class="leading-none font-extrabold">Trợ lý AI Duyệt hàng loạt</div>
+              <div class="text-[10px] text-white/80 font-normal mt-0.5">Thẩm định chuẩn CV 5512</div>
+            </div>
+            <span id="badge-pending-count" class="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-mono font-bold">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Department KPIs -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Tổng giáo án trong tổ:</span>
+          <div id="reviewer-kpi-total" class="text-xl font-bold text-slate-800 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Đã phê duyệt:</span>
+          <div id="reviewer-kpi-approved" class="text-xl font-bold text-emerald-600 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Yêu cầu chỉnh sửa:</span>
+          <div id="reviewer-kpi-revision" class="text-xl font-bold text-rose-600 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200 flex items-center justify-between">
+          <div>
+            <span class="text-slate-500 text-xs">Chuẩn đánh giá:</span>
+            <div class="text-xs font-bold text-blue-600 font-heading mt-0.5">CV 5512 (5 Tiêu chí)</div>
+          </div>
+          <span class="text-2xl">📋</span>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar (Đầy đủ 35 tuần) -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Giáo viên:</label>
+          <select id="reviewer-filter-teacher" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả giáo viên --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tuần dạy (Đầy đủ 35 tuần):</label>
+          <select id="reviewer-filter-week" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả các tuần (1 - 35) --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Trạng thái duyệt:</label>
+          <select id="reviewer-filter-status" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả trạng thái --</option>
+            <option value="CHO_DUYET">⏳ Chờ duyệt</option>
+            <option value="DA_DUYET">✅ Đã phê duyệt</option>
+            <option value="CAN_SUA">⚠️ Yêu cầu sửa</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tìm kiếm bài:</label>
+          <input type="text" id="reviewer-search-input" oninput="window.UIReviewer.applyFiltersAndRenderTable()" placeholder="Nhập tên bài, môn học..." class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- Floating Batch Actions Bar for Reviewer -->
+      <div id="reviewer-batch-bar" class="hidden p-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-indigo-500/40 text-indigo-200 flex items-center justify-center font-bold text-xs" id="reviewer-selected-count">0</span>
+          <div>
+            <div class="text-xs font-bold text-white">Kế hoạch bài dạy đã chọn</div>
+            <div class="text-[10px] text-slate-300">Thao tác phê duyệt hoặc thẩm định cùng lúc</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.UIReviewer.openAiBatchModalForSelected()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+            <span>🤖 AI Thẩm định các bài đã chọn</span>
+          </button>
+          <button onclick="window.UIReviewer.quickApproveSelected()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+            <span>✅ Phê duyệt các bài đã chọn</span>
+          </button>
+          <button onclick="window.UIReviewer.clearSelectedPlans()" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold transition">
+            Bỏ chọn
+          </button>
+        </div>
+      </div>
+
+      <!-- Reviewer Table -->
+      <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th class="px-3 py-3 text-center w-10">
+                  <input type="checkbox" id="reviewer-select-all-cb" onchange="window.UIReviewer.toggleSelectAll(this.checked)" class="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600" title="Chọn tất cả bài đang hiển thị">
+                </th>
+                <th class="px-3 py-3 text-center">Tuần</th>
+                <th class="px-4 py-3">Giáo viên</th>
+                <th class="px-4 py-3">Tên bài / Môn / Lớp</th>
+                <th class="px-4 py-3">Ngày nộp</th>
+                <th class="px-4 py-3">Trạng thái</th>
+                <th class="px-4 py-3">Điểm CV 5512</th>
+                <th class="px-4 py-3 text-right">Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="reviewer-plans-tbody" class="divide-y divide-slate-100 text-sm">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 3: ADMIN & PRINCIPAL PORTAL ================= -->
+    <section id="view-admin" class="hidden space-y-6">
+      
+      <!-- Principal Header -->
+      <div class="glass-panel p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-bold mb-1.5">
+            <span>🎓 Ban Giám Hiệu & Quản Trị Chuyên Môn</span>
+          </div>
+          <h2 class="text-xl md:text-2xl font-bold font-heading text-slate-900">Báo Cáo Tiến Độ & Quản Lý Giáo Viên</h2>
+          <p class="text-xs md:text-sm text-slate-500">Năm học 2026 - 2027 • Tự động tổ chức và đồng bộ Google Drive</p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button id="admin-btn-add-teacher-top" onclick="window.UIAdmin.openAddTeacherModal()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
+            <span>➕ Thêm Giáo Viên Mới</span>
+          </button>
+          <a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer" onclick="window.AppController.openUserDrive(); return false;" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5" title="Mở thư mục Google Drive của Thầy/Cô">
+            <span>📂 Mở Drive Gốc</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Admin & Version Info Banner -->
+      <div class="glass-card p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-bold shadow-sm">
+            👨‍💼
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-800">Quản trị viên: Võ Văn Hà - Giáo viên THCS Tây Phú</div>
+            <div class="text-[11px] text-slate-500">Tổ trưởng chuyên môn Tổ KHTN - Công nghệ • Trường THCS Tây Phú</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-semibold">
+          <span class="px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 shadow-xs">
+            🚀 Phiên bản: <strong>v2.5.2</strong> (Cập nhật 12/09/2026)
+          </span>
+        </div>
+      </div>
+
+      <!-- School-wide KPI -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="glass-card p-4 text-center">
+          <div class="text-slate-500 text-xs font-medium">Toàn trường đã nộp</div>
+          <div id="admin-stat-total" class="text-2xl font-extrabold text-blue-600 font-heading mt-1">0</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+          <div class="text-slate-500 text-xs font-medium">Đã phê duyệt</div>
+          <div id="admin-stat-approved" class="text-2xl font-extrabold text-emerald-600 font-heading mt-1">0</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+          <div class="text-slate-500 text-xs font-medium">Đang chờ duyệt</div>
+          <div id="admin-stat-pending" class="text-2xl font-extrabold text-amber-600 font-heading mt-1">0</div>
+        </div>
+        <div class="glass-card p-4 text-center">
+          <div class="text-slate-500 text-xs font-medium">Yêu cầu sửa</div>
+          <div id="admin-stat-revision" class="text-2xl font-extrabold text-rose-600 font-heading mt-1">0</div>
+        </div>
+        <div class="glass-card p-4 text-center col-span-2 md:col-span-1">
+          <div class="text-slate-500 text-xs font-medium">Tỷ lệ hoàn thành</div>
+          <div id="admin-stat-rate" class="text-2xl font-extrabold text-indigo-600 font-heading mt-1">0%</div>
+        </div>
+      </div>
+
+      <!-- Split View: Progress by Dept & Folder Tree Structure -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Department Progress -->
+        <div id="admin-dept-progress-container" class="lg:col-span-7 glass-panel rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-sm font-heading flex items-center gap-2">
+              <span>🏢 Tiến độ theo Tổ chuyên môn</span>
+            </h3>
+            <button id="btn-admin-add-dept" onclick="window.UIAdmin.openAddDepartmentModal()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5" title="Thêm tổ chuyên môn mới (Chỉ dành cho Admin)">
+              <span>➕ Thêm Tổ chuyên môn</span>
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                  <th class="px-4 py-2.5">Tổ bộ môn</th>
+                  <th class="px-4 py-2.5">Lãnh đạo tổ</th>
+                  <th class="px-4 py-2.5 text-center">Đã nộp</th>
+                  <th class="px-4 py-2.5 text-center">Đã duyệt</th>
+                  <th class="px-4 py-2.5 text-center">Chờ</th>
+                  <th class="px-4 py-2.5">Tỷ lệ</th>
+                  <th class="px-4 py-2.5 text-right admin-dept-action-th">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="admin-dept-tbody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Drive Folder Tree Visualizer -->
+        <div id="admin-drive-tree-container" class="lg:col-span-5 glass-panel rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-slate-800 text-sm font-heading flex items-center gap-2">
+              <span class="text-emerald-600">📁</span>
+              <span>Cấu trúc Thư mục Drive Tự động</span>
+            </h3>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Tự động phân cấp
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+            Hệ thống tự động tạo và phân phối tài liệu: <br>
+            <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">Năm học ➔ Tổ ➔ GV ➔ Tuần (1..35) ➔ File</code>
+          </p>
+
+          <div id="admin-drive-tree-view" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 overflow-y-auto max-h-80">
+            <!-- Tree rendered via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom: Teacher Management Table (Thêm, Xóa, Đổi mật khẩu) -->
+      <div id="admin-teacher-management-container" class="glass-panel rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base font-heading flex items-center gap-2">
+              <span>👥 Quản lý Danh sách Giáo viên & Tài khoản Đăng nhập</span>
+            </h3>
+            <p class="text-xs text-slate-500">Thêm mới, xóa tài khoản, đổi mật khẩu và phân quyền Tổ trưởng / Tổ phó / Giáo viên</p>
+          </div>
+          <button onclick="window.UIAdmin.openAddTeacherModal()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 shrink-0">
+            <span>➕ Thêm tài khoản Giáo viên</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-slate-100/80 text-slate-600 text-xs font-bold border-b border-slate-200">
+                <th class="px-4 py-2.5">Họ và Tên Giáo viên</th>
+                <th class="px-4 py-2.5">Tên đăng nhập</th>
+                <th class="px-4 py-2.5">Mật khẩu</th>
+                <th class="px-4 py-2.5">Tổ bộ môn</th>
+                <th class="px-4 py-2.5">Vai trò</th>
+                <th class="px-4 py-2.5 text-center">Tiến độ</th>
+                <th class="px-4 py-2.5 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="admin-teachers-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 4: SETTINGS & DRIVE CONFIG ================= -->
+    <section id="view-settings" class="hidden space-y-6 max-w-4xl mx-auto">
+      
+      <div class="glass-panel p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-xs font-bold mb-1.5">
+            <span>⚙️ Cấu hình Hệ thống</span>
+          </div>
+          <h2 class="text-xl font-bold font-heading text-slate-900">Kết nối Google Apps Script & Google Drive</h2>
+          <p class="text-xs text-slate-500 mt-1">Liên kết Web App với máy chủ Google cá nhân/nhà trường để kích hoạt tính năng lưu Drive tự động và Google Sheets.</p>
+        </div>
+
+        <!-- Gas Endpoint Input Card -->
+        <div class="p-5 rounded-xl bg-blue-50/60 border border-blue-200 space-y-4">
+          <div>
+            <label for="settings-gas-url" class="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Google Apps Script Web App URL:
+            </label>
+            <input type="url" id="settings-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 text-xs font-mono bg-white border border-slate-300 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 outline-none">
+            <p class="text-[11px] text-slate-500 mt-1">
+              Sau khi triển khai file <code class="text-blue-700 font-bold">gas/Code.gs</code> với quyền truy cập "Anyone", hãy dán URL Web App vào đây.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button id="btn-save-gas-url" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition">
+              Lưu Cấu Hình
+            </button>
+            <button id="btn-test-gas" class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs shadow-sm transition">
+              Kiểm tra kết nối (Ping)
+            </button>
+            <button id="btn-sync-drive-folders" onclick="window.DriveAPI.syncAllFolders()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5" title="Khởi tạo hoặc đồng bộ toàn bộ cây thư mục 35 tuần cho giáo viên trên Google Drive">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              <span>Đồng bộ Thư mục Drive (35 Tuần)</span>
+            </button>
+            <button type="button" id="btn-share-mobile-qr" onclick="window.AppController.openMobileQrModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5" title="Tạo mã QR hoặc link chia sẻ để kết nối ngay trên điện thoại">
+              <span>📲 Quét mã QR cho Điện thoại</span>
+            </button>
+            <div id="gas-conn-status" class="text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Guide Steps Box -->
+        <div class="border-t border-slate-200 pt-5 space-y-3">
+          <h4 class="font-bold text-slate-800 text-sm">📖 Hướng dẫn nhanh kết nối Google Drive (3 bước):</h4>
+          <ol class="list-decimal list-inside space-y-2 text-xs text-slate-600 leading-relaxed">
+            <li>Truy cập <a href="https://drive.google.com/drive/my-drive" target="_blank" class="text-blue-600 font-semibold underline">Google Drive của bạn</a> và tạo 1 Google Sheets mới với tên <code class="font-bold">CSDL_QuanLy_KHBD_TayPhu</code>.</li>
+            <li>Trong Google Sheets, chọn <strong>Tiện ích mở rộng (Extensions) ➔ Apps Script</strong>. Copy toàn bộ nội dung file <code class="text-blue-700 font-semibold">gas/Code.gs</code> trong dự án này và dán vào.</li>
+            <li>Nhấn <strong>Triển khai (Deploy) ➔ Triển khai mới (New deployment)</strong> ➔ Loại: <strong>Web App</strong> ➔ Quyền truy cập (Who has access): <strong>Bất kỳ ai (Anyone)</strong> ➔ Nhấn <strong>Triển khai</strong> và dán URL vào ô phía trên!</li>
+          </ol>
+        </div>
+
+        <!-- Reset Demo Action -->
+        <div class="border-t border-slate-200 pt-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-slate-700">Dữ liệu thử nghiệm (Demo)</div>
+            <div class="text-[11px] text-slate-500">Khôi phục lại dữ liệu mẫu ban đầu để kiểm thử các vai trò Giáo viên, Tổ trưởng, Tổ phó, BGH.</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="window.UITeacher.clearAllPlansPrompt()" class="px-3.5 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition border border-rose-200">
+              Xóa sạch KHBD
+            </button>
+            <button id="btn-reset-demo-data" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+              Khôi phục Demo
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 5: EQUIPMENT MANAGEMENT (TỔ KHTN - CN) ================= -->
+    <section id="view-equipment" class="hidden space-y-6">
+      <!-- Equipment Hero & Cloud Status Banner -->
+      <div class="glass-panel p-6 rounded-2xl border border-teal-100 bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-800 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-semibold backdrop-blur-sm">
+              <span>🔬 Phân hệ Quản lý & Mượn - Trả Thiết bị Dạy học</span>
+            </span>
+            <span id="equipment-cloud-badge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+              Đám Mây Trực Tuyến 🟢
+            </span>
+          </div>
+          <h2 class="text-xl md:text-2xl font-bold font-heading">
+            Tổ Khoa học Tự nhiên – Công nghệ & Dùng chung
+          </h2>
+          <p class="text-teal-100 text-xs md:text-sm mt-1">
+            Đồng bộ thời gian thực 2 chiều với Hệ thống Thiết bị Trường THCS Tây Phú • Năm học 2026 - 2027
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal()" class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs md:text-sm shadow-md transition flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Mượn Thiết bị Bổ sung</span>
+          </button>
+          <button onclick="window.EquipmentSyncEngine.printEquipmentReport()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5">
+            <span>🖨️ In Sổ Sư Phạm A4</span>
+          </button>
+          <button onclick="window.EquipmentSyncEngine.exportEquipmentExcel()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-emerald-600 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5">
+            <span>📊 Xuất Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-card p-4 border-l-4 border-l-teal-500">
+          <div class="text-slate-500 text-xs font-medium">Tổng thiết bị KHTN-CN trong kho</div>
+          <div id="eq-kpi-total" class="text-2xl font-bold text-slate-800 font-heading mt-1">0</div>
+          <div class="text-[11px] text-teal-700 font-semibold mt-0.5">26 danh mục (TT38 & Dùng chung)</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-emerald-500">
+          <div class="text-slate-500 text-xs font-medium">Khả dụng sẵn sàng mượn</div>
+          <div id="eq-kpi-available" class="text-2xl font-bold text-emerald-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-emerald-600 font-semibold mt-0.5">Thiết bị đang rảnh trong kho</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-amber-500">
+          <div class="text-slate-500 text-xs font-medium">Đang cho GV mượn giảng dạy</div>
+          <div id="eq-kpi-borrowing" class="text-2xl font-bold text-amber-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-amber-600 mt-0.5">Tiết dạy chưa kết thúc/chưa trả</div>
+        </div>
+        <div class="glass-card p-4 border-l-4 border-l-indigo-500">
+          <div class="text-slate-500 text-xs font-medium">Cá nhân Thầy/Cô đang mượn</div>
+          <div id="eq-kpi-my-borrows" class="text-2xl font-bold text-indigo-600 font-heading mt-1">0</div>
+          <div class="text-[11px] text-indigo-600 font-semibold mt-0.5">Cần báo trả sau tiết dạy</div>
+        </div>
+      </div>
+
+      <!-- Sổ Theo Dõi Mượn Trả Section -->
+      <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-4 md:p-5 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
+              <span>📖 Sổ Theo Dõi Sử Dụng Thiết Bị Dạy Học</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 font-semibold border border-teal-200">Tổ KHTN - CN</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Ghi nhận đầy đủ tiết dạy, lớp học, kế hoạch bài dạy và tình trạng hoàn trả</p>
+          </div>
+          
+          <!-- Filters -->
+          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <select id="eq-filter-week" onchange="window.EquipmentSyncEngine.currentFilterWeek = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="ALL">-- Tất cả 35 tuần --</option>
+            </select>
+
+            <select id="eq-filter-status" onchange="window.EquipmentSyncEngine.currentFilterStatus = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="ALL">-- Tất cả trạng thái --</option>
+              <option value="Đang mượn">Đang mượn</option>
+              <option value="Đã trả">Đã trả</option>
+            </select>
+
+            <select id="eq-filter-teacher" onchange="window.EquipmentSyncEngine.currentFilterTeacher = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="ALL">-- Tất cả giáo viên --</option>
+            </select>
+
+            <input type="text" id="eq-search-input" oninput="window.EquipmentSyncEngine.searchKeyword = this.value; window.EquipmentSyncEngine.renderEquipmentView();" placeholder="Tìm kiếm thiết bị, bài dạy..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 w-44">
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                <th class="px-3 py-3 text-center w-10">STT</th>
+                <th class="px-3 py-3 w-28">Ngày / Buổi / Tiết</th>
+                <th class="px-3 py-3 w-20">Lớp dạy</th>
+                <th class="px-3 py-3">Bài dạy & Môn học</th>
+                <th class="px-3 py-3">Thiết bị mượn</th>
+                <th class="px-3 py-3 text-center w-14">SL</th>
+                <th class="px-3 py-3 w-36">Người mượn</th>
+                <th class="px-3 py-3 text-center w-28">Trạng thái</th>
+                <th class="px-3 py-3 text-right w-28">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="eq-tracking-tbody" class="divide-y divide-slate-100">
+              <!-- Rendered by window.EquipmentSyncEngine -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+      </div> <!-- /flex-1 min-w-0 w-full -->
+    </div> <!-- /flex flex-col lg:flex-row -->
+  </main>
+
+  <!-- ================= MODAL LOGIN (MÀN HÌNH ĐĂNG NHẬP) ================= -->
+  <div id="modal-login" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+    <div class="modal-panel glass-panel w-full max-w-lg rounded-3xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-100 text-center bg-gradient-to-b from-blue-50/90 to-transparent">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-3xl flex items-center justify-center mx-auto mb-2.5 shadow-lg">
+          🔐
+        </div>
+        <div class="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Trường THCS Tây Phú</div>
+        <h3 class="text-xl font-extrabold font-heading text-slate-900 mt-0.5">ĐĂNG NHẬP HỆ THỐNG KHBD</h3>
+        <p class="text-xs text-slate-500 mt-1">Dành cho Tổ trưởng, Tổ phó và Giáo viên Tổ KHTN - Công nghệ</p>
+      </div>
+
+      <!-- Form Login -->
+      <form id="form-login" class="p-6 space-y-4">
+        
+        <div id="login-error-msg" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center"></div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tên đăng nhập:</label>
+          <input type="text" id="login-username" required placeholder="Nhập tên đăng nhập (vd: vovanha)" class="w-full px-4 py-2.5 text-xs font-medium bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mật khẩu:</label>
+          <input type="password" id="login-password" required placeholder="Nhập mật khẩu (mặc định: 123)" class="w-full px-4 py-2.5 text-xs font-medium bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition">
+          Đăng Nhập Ngay
+        </button>
+
+        <!-- Gợi ý bảo mật tài khoản (Không hiển thị danh sách để tránh đăng nhập nhầm) -->
+        <div class="border-t border-slate-100 pt-3">
+          <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 text-slate-600 text-xs leading-relaxed space-y-1.5">
+            <div class="font-bold text-blue-900 flex items-center gap-1.5">
+              <span>🛡️</span> Bảo mật tài khoản cá nhân:
+            </div>
+            <p class="text-[11px] text-slate-600">
+              • Tên đăng nhập là tên viết liền không dấu (VD: <code>vovanha</code>, <code>truongthientanh</code>, <code>nguyenthithuha</code>...).
+            </p>
+            <p class="text-[11px] text-blue-800 font-semibold bg-blue-100/60 px-2 py-1 rounded">
+              • Tài khoản Quản trị viên (Admin): <code>admin</code> (Mật khẩu: <code>123</code>) - Toàn quyền quản lý giáo viên, tổ chuyên môn & cấu hình Google Drive.
+            </p>
+            <p class="text-[11px] text-slate-600">
+              • Mật khẩu ban đầu mặc định là <code>123</code>. Thầy/Cô nên đổi mật khẩu riêng tại menu cá nhân sau khi đăng nhập.
+            </p>
+            <p class="text-[11px] text-amber-700 font-medium">
+              ⚠️ Không chia sẻ thông tin đăng nhập để tránh nộp hoặc ký duyệt nhầm Kế hoạch bài dạy.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-100 flex flex-col items-center gap-1 text-[11px] text-slate-500 text-center">
+          <div>Quản trị hệ thống: <strong class="text-slate-800">Võ Văn Hà - Giáo viên THCS Tây Phú</strong></div>
+          <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">
+            <span>🚀 Phiên bản mới nhất: <strong>v2.5.2</strong></span>
+          </div>
+        </div>
+
+        <div id="btn-close-login-modal" class="pt-2 text-center" style="display: none;">
+          <button type="button" onclick="window.AppController.closeLoginModal()" class="text-xs text-slate-500 hover:text-slate-800 font-semibold underline">
+            Đóng cửa sổ
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL CHANGE PASSWORD (ĐỔI MẬT KHẨU CÁ NHÂN) ================= -->
+  <div id="modal-change-password" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔒</span>
+          <h3 class="text-base font-bold font-heading text-slate-900">Thay Đổi Mật Khẩu Cá Nhân</h3>
+        </div>
+        <button onclick="window.AppController.closeChangePasswordModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-change-password" class="p-5 space-y-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mật khẩu hiện tại <span class="text-rose-500">*</span></label>
+          <input type="password" id="change-pass-current" required placeholder="Nhập mật khẩu hiện tại" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mật khẩu mới <span class="text-rose-500">*</span></label>
+          <input type="password" id="change-pass-new" required minlength="3" placeholder="Nhập mật khẩu mới (tối thiểu 3 ký tự)" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Xác nhận mật khẩu mới <span class="text-rose-500">*</span></label>
+          <input type="password" id="change-pass-confirm" required minlength="3" placeholder="Nhập lại mật khẩu mới" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="window.AppController.closeChangePasswordModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            Hủy
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition">
+            Cập Nhật Mật Khẩu
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL RESET TEACHER PASSWORD (QUẢN TRỊ ĐỔI MK GIÁO VIÊN) ================= -->
+  <div id="modal-reset-teacher-password" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-amber-50/60">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔑</span>
+          <div>
+            <h3 class="text-base font-bold font-heading text-slate-900">Đặt Lại Mật Khẩu Cho Giáo Viên</h3>
+            <p id="reset-pass-teacher-name" class="text-xs text-slate-500 font-semibold">Tên giáo viên</p>
+          </div>
+        </div>
+        <button onclick="window.UIAdmin.closeResetPasswordModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <form onsubmit="window.UIAdmin.handleResetPasswordSubmit(event)" class="p-5 space-y-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mật khẩu mới cho giáo viên <span class="text-rose-500">*</span></label>
+          <input type="text" id="reset-pass-new-password" required minlength="3" value="123" placeholder="Nhập mật khẩu mới" class="w-full px-3.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">Mặc định: <code>123</code>. Giáo viên có thể tự đổi lại mật khẩu sau khi đăng nhập.</p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="window.UIAdmin.closeResetPasswordModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            Hủy
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition">
+            Lưu Mật Khẩu Mới
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ADD DEPARTMENT (THÊM TỔ CHUYÊN MÔN MỚI - CHỈ ADMIN) ================= -->
+  <div id="modal-add-department" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏢</span>
+          <h3 class="text-base font-bold font-heading text-slate-900">Thêm Tổ Chuyên Môn Mới</h3>
+        </div>
+        <button onclick="window.UIAdmin.closeAddDepartmentModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-add-department" onsubmit="window.UIAdmin.handleAddDepartmentSubmit(event)" class="p-5 space-y-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tên Tổ chuyên môn <span class="text-rose-500">*</span></label>
+          <input type="text" id="new-dept-name" required placeholder="VD: Tổ Ngoại ngữ - GDCD" class="w-full px-3.5 py-2 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mã tổ viết tắt (tùy chọn):</label>
+          <input type="text" id="new-dept-code" placeholder="VD: NN_GDCD (để trống sẽ tự sinh)" class="w-full px-3.5 py-2 text-xs font-mono uppercase bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Họ tên Tổ trưởng (tùy chọn):</label>
+          <input type="text" id="new-dept-leader" placeholder="VD: Cô Nguyễn Thị Thu Hà" class="w-full px-3.5 py-2 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="window.UIAdmin.closeAddDepartmentModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            Hủy
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition">
+            Tạo Tổ Chuyên Môn
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ADD TEACHER (THÊM TÀI KHOẢN GIÁO VIÊN MỚI) ================= -->
+  <div id="modal-add-teacher" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-lg rounded-2xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-emerald-50/50">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">➕</span>
+          <h3 class="text-base font-bold font-heading text-slate-900">Thêm Mới Tài Khoản Giáo Viên</h3>
+        </div>
+        <button onclick="window.UIAdmin.closeAddTeacherModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-add-teacher" onsubmit="window.UIAdmin.handleAddTeacherSubmit(event)" class="p-5 space-y-4">
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Họ và Tên Giáo viên <span class="text-rose-500">*</span></label>
+          <input type="text" id="new-teacher-name" required placeholder="VD: Cô Nguyễn Thị Phước Hoài" class="w-full px-3.5 py-2 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tên đăng nhập <span class="text-rose-500">*</span></label>
+            <input type="text" id="new-teacher-username" required placeholder="VD: nguyenthiphuochoai" class="w-full px-3.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mật khẩu khởi tạo <span class="text-rose-500">*</span></label>
+            <input type="text" id="new-teacher-password" required value="123" placeholder="Mật khẩu" class="w-full px-3.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Vai trò nhiệm vụ <span class="text-rose-500">*</span></label>
+            <select id="new-teacher-role" required class="w-full px-3.5 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <option value="GIAO_VIEN">Giáo viên bộ môn</option>
+              <option value="TO_PHO">Tổ phó chuyên môn</option>
+              <option value="TO_TRUONG">Tổ trưởng chuyên môn</option>
+              <option value="BGH">Ban Giám Hiệu</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tổ bộ môn <span class="text-rose-500">*</span></label>
+            <select id="new-teacher-dept" required class="w-full px-3.5 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <option value="To_KHTN_CN">Tổ Khoa học Tự nhiên - Công nghệ</option>
+              <option value="To_KHXH">Tổ Khoa học Xã hội</option>
+              <option value="To_Toan_Tin">Tổ Toán - Tin học</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Môn giảng dạy chính:</label>
+          <input type="text" id="new-teacher-subjects" placeholder="VD: Khoa học tự nhiên, Hoạt động trải nghiệm hướng nghiệp" class="w-full px-3.5 py-2 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="window.UIAdmin.closeAddTeacherModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            Hủy
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition">
+            Tạo Tài Khoản
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL UPLOAD KẾ HOẠCH BÀI DẠY (ĐẦY ĐỦ 35 TUẦN) ================= -->
+  <div id="modal-upload-plan" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-2xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50/50">
+        <div>
+          <h3 id="modal-upload-title" class="text-base font-bold font-heading text-slate-900">
+            Thêm mới Kế hoạch Bài dạy (Upload Giáo án)
+          </h3>
+          <p class="text-xs text-slate-500">File sẽ được tự động lưu vào Google Drive của Thầy/Cô theo đúng tuần</p>
+        </div>
+        <button onclick="window.UITeacher.closeUploadModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-upload-plan" onsubmit="window.UITeacher.handleFormSubmit(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="upload-reupload-id" value="">
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <!-- ĐIỀU CHỈNH Ô TUẦN DẠY HỖ TRỢ NHẬP ĐA TUẦN (VD: 1, 2 HOẶC 2, 3) -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tuần dạy <span class="text-rose-500">*</span></label>
+            <input type="text" id="upload-tuan" list="list-tuan-suggestions" value="3" placeholder="VD: 1, 2 hoặc 2, 3" required class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono">
+            <datalist id="list-tuan-suggestions">
+              <option value="1">Tuần 1</option>
+              <option value="2">Tuần 2</option>
+              <option value="3">Tuần 3</option>
+              <option value="4">Tuần 4</option>
+              <option value="5">Tuần 5</option>
+              <option value="6">Tuần 6</option>
+              <option value="7">Tuần 7</option>
+              <option value="8">Tuần 8</option>
+              <option value="9">Tuần 9</option>
+              <option value="10">Tuần 10</option>
+              <option value="11">Tuần 11</option>
+              <option value="12">Tuần 12</option>
+              <option value="13">Tuần 13</option>
+              <option value="14">Tuần 14</option>
+              <option value="15">Tuần 15</option>
+              <option value="16">Tuần 16</option>
+              <option value="17">Tuần 17</option>
+              <option value="18">Tuần 18</option>
+              <option value="19">Tuần 19</option>
+              <option value="20">Tuần 20</option>
+              <option value="21">Tuần 21</option>
+              <option value="22">Tuần 22</option>
+              <option value="23">Tuần 23</option>
+              <option value="24">Tuần 24</option>
+              <option value="25">Tuần 25</option>
+              <option value="26">Tuần 26</option>
+              <option value="27">Tuần 27</option>
+              <option value="28">Tuần 28</option>
+              <option value="29">Tuần 29</option>
+              <option value="30">Tuần 30</option>
+              <option value="31">Tuần 31</option>
+              <option value="32">Tuần 32</option>
+              <option value="33">Tuần 33</option>
+              <option value="34">Tuần 34</option>
+              <option value="35">Tuần 35</option>
+              <option value="1, 2">Tuần 1, 2</option>
+              <option value="2, 3">Tuần 2, 3</option>
+              <option value="3, 4">Tuần 3, 4</option>
+              <option value="4, 5">Tuần 4, 5</option>
+              <option value="5, 6">Tuần 5, 6</option>
+              <option value="7, 8">Tuần 7, 8</option>
+              <option value="9, 10">Tuần 9, 10</option>
+            </datalist>
+          </div>
+
+          <!-- BỔ SUNG MỤC TIẾT PPCT (DẠNG SỐ: 1, 2, 3) -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tiết PPCT <span class="text-rose-500">*</span></label>
+            <input type="text" id="upload-tiet-ppct" value="1, 2, 3" required placeholder="VD: 1, 2, 3 hoặc 7, 8" class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <!-- BỔ SUNG MÔN HOẠT ĐỘNG TRẢI NGHIỆM HƯỚNG NGHIỆP -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Môn học <span class="text-rose-500">*</span></label>
+            <select id="upload-mon" required class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="Khoa học tự nhiên">Khoa học tự nhiên</option>
+              <option value="Hoạt động trải nghiệm hướng nghiệp">Hoạt động trải nghiệm hướng nghiệp</option>
+              <option value="Vật lí">Vật lí</option>
+              <option value="Hóa học">Hóa học</option>
+              <option value="Sinh học">Sinh học</option>
+              <option value="Công nghệ">Công nghệ</option>
+              <option value="Toán học">Toán học</option>
+              <option value="Tin học">Tin học</option>
+              <option value="Ngữ văn">Ngữ văn</option>
+              <option value="Lịch sử và Địa lí">Lịch sử và Địa lí</option>
+              <option value="Tiếng Anh">Tiếng Anh</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Khối lớp <span class="text-rose-500">*</span></label>
+            <select id="upload-khoi" required class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="Khối 9">Khối 9</option>
+              <option value="Khối 8">Khối 8</option>
+              <option value="Khối 7">Khối 7</option>
+              <option value="Khối 6">Khối 6</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Lớp dạy <span class="text-rose-500">*</span></label>
+            <input type="text" id="upload-lop" value="9A4" required placeholder="VD: 9A4, 9A1" class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tên bài dạy / Chủ đề bài học <span class="text-rose-500">*</span></label>
+          <input type="text" id="upload-tieude" required placeholder="VD: Bài 3: Hiện tượng khúc xạ ánh sáng và thấu kính hội tụ" class="w-full px-3.5 py-2.5 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tệp Kế hoạch bài dạy (.docx hoặc .pdf)</label>
+          <input type="file" id="upload-file-input" accept=".docx,.doc,.pdf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="hidden">
+          
+          <label for="upload-file-input" id="file-dropzone" class="dropzone-box p-6 text-center cursor-pointer block active:scale-[0.99] transition-transform select-none">
+            <div class="w-10 h-10 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-2">
+              📤
+            </div>
+            <div id="dropzone-file-name" class="text-xs font-medium text-slate-700">
+              Kéo thả file <span class="font-bold text-blue-600">.docx</span> hoặc <span class="font-bold text-rose-600">.pdf</span> vào đây, hoặc nhấp để chọn tệp
+            </div>
+            <div class="mt-2.5">
+              <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span>Chạm để chọn tệp từ máy / điện thoại</span>
+              </span>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-2">Hệ thống tự động chuẩn hóa: KHBD_[Mon]_[Khoi]_[Tuan]_[HoTen].docx</div>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Hoặc Liên kết Google Docs trực tuyến (Tùy chọn):</label>
+          <input type="url" id="upload-docs-url" placeholder="https://docs.google.com/document/d/.../edit" class="w-full px-3.5 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Ghi chú cho Tổ chuyên môn:</label>
+          <textarea id="upload-ghichu" rows="2" placeholder="Ghi chú về thiết bị thí nghiệm, đồ dùng dạy học hoặc nội dung cần lưu ý..." class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+        </div>
+
+        <!-- MỤC ĐĂNG KÝ MƯỢN THIẾT BỊ DẠY HỌC (TỔ KHTN - CN & DÙNG CHUNG) -->
+        <div class="p-4 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="upload-borrow-equipment-checkbox" onchange="document.getElementById('upload-borrow-equipment-container').style.display = this.checked ? 'block' : 'none';" class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+              <span class="text-xs font-bold text-teal-900 flex items-center gap-1">
+                <span>🔬 Đăng ký mượn Thiết bị dạy học cho tiết dạy này</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">Tổ KHTN - CN</span>
+              </span>
+            </label>
+            <span class="text-[10px] text-teal-700 hidden sm:inline">Tự động đồng bộ sang Sổ Thiết Bị</span>
+          </div>
+
+          <!-- Container mở rộng khi giáo viên tích chọn -->
+          <div id="upload-borrow-equipment-container" style="display: none;" class="pt-2 space-y-3 border-t border-teal-200/60">
+            <div>
+              <label class="block text-[11px] font-bold text-teal-900 uppercase mb-1">Chọn Thiết bị dạy học cần mượn <span class="text-rose-500">*</span></label>
+              <select id="upload-equipment-select" class="w-full px-3 py-2 text-xs font-medium bg-white border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                <!-- Tự động kết xuất bởi window.UITeacher / EquipmentSyncEngine -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div>
+                <label class="block text-[10px] font-bold text-teal-900 uppercase mb-1">Số lượng <span class="text-rose-500">*</span></label>
+                <input type="number" id="upload-equipment-quantity" value="1" min="1" max="50" class="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 text-center font-mono">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-teal-900 uppercase mb-1">Ngày dạy / mượn</label>
+                <input type="date" id="upload-equipment-date" class="w-full px-2.5 py-1.5 text-xs bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-mono">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-teal-900 uppercase mb-1">Buổi dạy</label>
+                <select id="upload-equipment-session" class="w-full px-2 py-1.5 text-xs bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+                  <option value="Sáng">Sáng</option>
+                  <option value="Chiều">Chiều</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-teal-900 uppercase mb-1">Phòng học / Bộ môn</label>
+                <input type="text" id="upload-equipment-room" value="Phòng TH KHTN" placeholder="VD: Phòng TH KHTN, Lớp 9A4" class="w-full px-2.5 py-1.5 text-xs bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              </div>
+            </div>
+            <div class="text-[11px] text-teal-800 bg-white/70 p-2 rounded-lg border border-teal-200">
+              💡 Phiếu mượn sẽ được tự động tạo với mã chuẩn <code>REC-2026-xxx</code> và đồng bộ tức thì lên Cloud để Thầy Nguyễn Sỹ Tuấn (CB Thiết bị) chuẩn bị trước cho Thầy/Cô.
+            </div>
+          </div>
+        </div>
+
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="window.UITeacher.closeUploadModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+            Hủy
+          </button>
+          <button type="submit" id="btn-submit-plan" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
+            <span>Nộp Kế hoạch bài dạy</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL REVIEW & APPROVE (TỔ TRƯỞNG & TỔ PHÓ) ================= -->
+  <div id="modal-review-plan" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-5xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col h-[92vh]">
+      
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">ĐÁNH GIÁ CHUYÊN MÔN</span>
+            <h3 id="review-plan-header-title" class="text-base font-bold font-heading text-slate-900">Tiêu đề bài dạy</h3>
+          </div>
+          <p id="review-plan-author" class="text-xs text-slate-500 mt-0.5">Tác giả: GV Võ Văn Hà</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <span id="review-total-score-badge" class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-emerald-100 text-emerald-800 border border-emerald-200">
+            10/10 điểm
+          </span>
+          <button onclick="window.UIReviewer.closeReviewModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        
+        <!-- Left: Preview Container -->
+        <div class="lg:col-span-6 p-4 bg-slate-100/70 border-r border-slate-200 overflow-hidden flex flex-col">
+          <div id="review-preview-frame-container" class="flex-1 w-full h-full">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Right: 5512 Evaluation & Signature Pad -->
+        <div class="lg:col-span-6 p-5 overflow-y-auto space-y-4">
+          
+          <!-- TRỢ LÝ AI GỢI Ý CHẤM ĐIỂM & NHẬN XÉT DÀNH CHO TỔ TRƯỞNG / TỔ PHÓ -->
+          <div class="p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 flex items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-xs font-bold shrink-0">
+                🤖
+              </div>
+              <div>
+                <div class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <span>Trợ lý AI Thẩm định 5512</span>
+                  <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700">Tổ KHTN-CN</span>
+                </div>
+                <div class="text-[10px] text-slate-500">Tự động đọc bài, chấm điểm 5 tiêu chí & sinh nhận xét chuẩn hóa</div>
+              </div>
+            </div>
+            <button type="button" id="btn-ai-single-suggest" onclick="window.UIReviewer.runAiSuggestForCurrentPlan()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1 shrink-0 active:scale-95">
+              <span>⚡ AI Điền điểm & Nhận xét</span>
+            </button>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Đánh giá 5 Tiêu chí (Chuẩn CV 5512)</span>
+              <span class="text-[10px] text-slate-400 font-normal">Thang điểm 10</span>
+            </h4>
+            <div id="review-criteria-container" class="space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Nhận xét / Góp ý chi tiết cho giáo viên:</label>
+            <textarea id="review-comment-input" rows="3" placeholder="Ghi nhận xét cụ thể về phương pháp, thiết bị, cách tổ chức hoặc yêu cầu bổ sung nếu có..." class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+          </div>
+
+          <div class="border-t border-slate-100 pt-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <span>✍️ Ký duyệt điện tử bằng cảm ứng / chuột:</span>
+              </label>
+              <button type="button" onclick="window.AppSignature.clearPad()" class="text-[11px] font-semibold text-rose-600 hover:underline">
+                Xóa chữ ký
+              </button>
+            </div>
+            
+            <div class="signature-wrapper h-28">
+              <canvas id="signature-canvas" class="w-full h-full"></canvas>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-1 italic">Chữ ký và dấu mộc điện tử của Tổ chuyên môn sẽ được gán kèm thời gian vào hồ sơ giáo án.</div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
+            <button type="button" onclick="window.UIReviewer.submitReviewAction('TU_CHOI')" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+              Từ chối
+            </button>
+            <button type="button" onclick="window.UIReviewer.submitReviewAction('CAN_SUA')" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow transition flex items-center gap-1">
+              <span>⚠️ Yêu cầu chỉnh sửa</span>
+            </button>
+            <button type="button" onclick="window.UIReviewer.submitReviewAction('DA_DUYET')" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
+              <span>✅ Phê duyệt & Đóng dấu</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL AI BATCH REVIEW (TỔ TRƯỞNG/TỔ PHÓ THẨM ĐỊNH & DUYỆT HÀNG LOẠT) ================= -->
+  <div id="modal-ai-batch-review" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/70 backdrop-blur-md">
+    <div class="modal-panel glass-panel w-full max-w-6xl rounded-3xl shadow-2xl border border-white/60 overflow-hidden flex flex-col max-h-[94vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center text-xl shadow-md">
+            🤖
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold font-heading text-slate-900 flex items-center gap-2">
+              <span>Trợ lý AI - Thẩm định & Ký duyệt Hàng loạt</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold">Chuẩn Công văn 5512/BGDĐT</span>
+            </h3>
+            <p class="text-xs text-slate-500">Dành cho Tổ trưởng & Tổ phó chuyên môn: Tự động đánh giá 5 tiêu chí và phê duyệt số lượng lớn</p>
+          </div>
+        </div>
+        <button onclick="window.UIReviewer.closeAiBatchModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-5">
+        
+        <!-- Controls & Scope Card -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Phạm vi kế hoạch bài dạy:</label>
+              <div id="ai-batch-scope-info" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span id="ai-batch-plans-count-label">Đang tải danh sách bài...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button type="button" id="btn-run-batch-ai" onclick="window.UIReviewer.startBatchAiAnalysis()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-extrabold shadow-md shadow-indigo-500/25 active:scale-95 transition flex items-center gap-2">
+              <span class="text-base">🚀</span>
+              <span>Bắt đầu quét & Thẩm định AI (CV 5512)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scanning Progress Bar (hidden by default) -->
+        <div id="ai-batch-progress-container" class="hidden p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span id="ai-batch-progress-status" class="font-bold text-indigo-900 flex items-center gap-2">
+              <span class="inline-block animate-spin">🤖</span>
+              <span>Đang phân tích cấu trúc bài dạy theo 5 tiêu chuẩn CV 5512...</span>
+            </span>
+            <span id="ai-batch-progress-percent" class="font-mono font-bold text-indigo-700">0%</span>
+          </div>
+          <div class="w-full h-2.5 bg-indigo-100 rounded-full overflow-hidden">
+            <div id="ai-batch-progress-fill" class="h-full bg-gradient-to-r from-purple-600 to-indigo-600 transition-all duration-300 rounded-full" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Results Table Container -->
+        <div id="ai-batch-results-wrapper">
+          <div id="ai-batch-empty-placeholder" class="p-10 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl mb-3">
+              📑
+            </div>
+            <h4 class="font-bold text-slate-800 text-sm mb-1">Sẵn sàng thẩm định Kế hoạch bài dạy</h4>
+            <p class="text-xs text-slate-500 max-w-md mx-auto mb-4">
+              Nhấn nút <strong>"Bắt đầu quét & Thẩm định AI"</strong> ở trên để hệ thống tự động kiểm tra 5 tiêu chí (Mục tiêu, Thiết bị, Tiến trình 4 bước, Đánh giá, Phân hóa) và gợi ý kết quả phê duyệt cho Thầy/Cô.
+            </p>
+            <div class="flex flex-wrap justify-center gap-2 text-[11px] text-slate-600">
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold">1. Mục tiêu (2đ)</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold">2. Thiết bị/Học liệu (2đ)</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold">3. Tiến trình 4 bước (3đ)</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold">4. Đánh giá (2đ)</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-semibold">5. Phân hóa (1đ)</span>
+            </div>
+          </div>
+
+          <div id="ai-batch-results-table-box" class="hidden space-y-4">
+            <!-- Results Header Summary -->
+            <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-slate-100 via-indigo-50/50 to-slate-100 rounded-xl border border-slate-200 text-xs">
+              <div class="flex items-center gap-3">
+                <span class="font-bold text-slate-700">Kết quả tổng hợp:</span>
+                <span id="ai-batch-count-total" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-slate-800">Tổng: 0 bài</span>
+                <span id="ai-batch-count-approved" class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 font-bold text-emerald-700">Đạt chuẩn 5512: 0</span>
+                <span id="ai-batch-count-revision" class="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 font-bold text-rose-700">Cần chỉnh sửa: 0</span>
+              </div>
+              <div class="text-[11px] text-slate-500 italic">
+                * Thầy/Cô có thể nhấp vào nhận xét hoặc quyết định để điều chỉnh trước khi ký duyệt
+              </div>
+            </div>
+
+            <!-- Table of Plans with AI Evaluation -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-xs">
+              <table class="w-full text-left border-collapse bg-white">
+                <thead>
+                  <tr class="bg-slate-100 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                    <th class="px-3 py-2.5 text-center w-12">Tuần</th>
+                    <th class="px-3 py-2.5">Giáo viên</th>
+                    <th class="px-3 py-2.5">Tên bài dạy / Môn / Tiết</th>
+                    <th class="px-3 py-2.5 text-center">Điểm 5 tiêu chí</th>
+                    <th class="px-3 py-2.5 text-center">Tổng điểm</th>
+                    <th class="px-3 py-2.5">Nhận xét & Gợi ý của AI (Có thể sửa)</th>
+                    <th class="px-3 py-2.5 text-center">Quyết định duyệt</th>
+                  </tr>
+                </thead>
+                <tbody id="ai-batch-results-tbody" class="divide-y divide-slate-100 text-xs">
+                  <!-- Rendered via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Signature & Reviewer Confirmation -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div>
+                  <h5 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>✍️ Chữ ký & Dấu mộc điện tử của Người duyệt:</span>
+                  </h5>
+                  <p class="text-[11px] text-slate-500">Chữ ký này sẽ được đóng dấu điện tử kèm ngày giờ vào tất cả các bài được duyệt.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <label class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="ai-batch-use-signature-canvas" checked onchange="window.UIReviewer.toggleBatchSignatureMode(this.checked)" class="w-4 h-4 text-blue-600 rounded">
+                    <span>Ký trực tiếp trên khung cảm ứng</span>
+                  </label>
+                  <button type="button" onclick="window.AppSignature.clearPad('batch-signature-canvas')" class="text-[11px] font-semibold text-rose-600 hover:underline">
+                    Xóa chữ ký
+                  </button>
+                </div>
+              </div>
+
+              <div id="batch-signature-canvas-container" class="signature-wrapper h-24 bg-white rounded-xl border border-slate-300">
+                <canvas id="batch-signature-canvas" class="w-full h-full"></canvas>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+        <button type="button" onclick="window.UIReviewer.closeAiBatchModal()" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition">
+          Đóng
+        </button>
+
+        <div class="flex items-center gap-2.5">
+          <button type="button" id="btn-apply-batch-review" disabled onclick="window.UIReviewer.applyBatchReviewResults()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-extrabold shadow-md transition flex items-center gap-1.5">
+            <span>⚡ Xác nhận Ký duyệt & Áp dụng hàng loạt</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL FEEDBACK (XEM NHẬN XÉT & MỘC PHÊ DUYỆT) ================= -->
+  <div id="modal-feedback" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-lg rounded-2xl shadow-2xl border border-white/60 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="text-base font-bold font-heading text-slate-900">Chi tiết Nhận xét & Kết quả Phê duyệt</h3>
+          <p id="feedback-plan-title" class="text-xs text-slate-500 font-medium truncate max-w-xs">Tiêu đề bài</p>
+        </div>
+        <button onclick="window.UITeacher.closeFeedbackModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="flex items-center justify-between text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div>
+            <div class="text-slate-400 text-[10px] uppercase font-bold">Người kiểm tra:</div>
+            <div id="feedback-reviewer" class="font-bold text-slate-800">Thầy Võ Văn Hà</div>
+          </div>
+          <div class="text-right">
+            <div class="text-slate-400 text-[10px] uppercase font-bold">Thời gian duyệt:</div>
+            <div id="feedback-date" class="font-semibold text-slate-600 font-mono">--/--/----</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-700 uppercase mb-1.5">Điểm đánh giá theo CV 5512:</div>
+          <div id="feedback-criteria-scores" class="space-y-1 bg-white p-3 rounded-xl border border-slate-200">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs font-bold text-slate-700 uppercase mb-1">Góp ý / Nhận xét của Tổ chuyên môn:</div>
+          <div id="feedback-comment" class="text-xs text-slate-700 bg-amber-50/60 border border-amber-200 p-3 rounded-xl leading-relaxed whitespace-pre-wrap">
+            --
+          </div>
+        </div>
+
+        <div class="text-center pt-2">
+          <div class="text-[11px] font-bold text-slate-400 uppercase mb-1">Dấu Mộc Phê Duyệt Điện Tử:</div>
+          <div id="feedback-stamp-container" class="flex justify-center">
+            <!-- Digital stamp HTML rendered via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button onclick="window.UITeacher.closeFeedbackModal()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition">
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL PREVIEW DOCUMENT ================= -->
+  <div id="modal-preview-doc" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-5xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col h-[92vh]">
+      
+      <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 id="preview-modal-title" class="text-sm font-bold font-heading text-slate-900">Xem trước Kế hoạch bài dạy</h3>
+          <p id="preview-modal-author" class="text-xs text-slate-500">GV: Võ Văn Hà</p>
+        </div>
+          <button type="button" id="preview-open-drive-link" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+            <span>Mở xem trên Google Docs ↗</span>
+          </button>
+          <button onclick="window.AppViewer.closePreview()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 bg-slate-900 relative">
+        <iframe id="preview-doc-iframe" class="w-full h-full border-0 bg-white" src="about:blank"></iframe>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL MOBILE QR CODE ================= -->
+  <div id="modal-mobile-qr" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col p-6 text-center">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
+          <span>📲 Kết nối Nhanh trên Điện thoại</span>
+        </h3>
+        <button onclick="window.AppController.closeMobileQrModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition">
+          ✕
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-600 mb-4 text-left leading-relaxed">
+        Thầy/Cô chỉ cần <strong>mở Camera trên điện thoại</strong> quét mã QR dưới đây. Ứng dụng trên điện thoại sẽ tự động kết nối và đồng bộ toàn bộ dữ liệu Google Drive & Sheets theo thời gian thực!
+      </p>
+
+      <div class="p-4 bg-white rounded-2xl border-2 border-indigo-100 shadow-inner inline-flex items-center justify-center mx-auto mb-4">
+        <img id="mobile-qr-image" src="" alt="Mã QR kết nối điện thoại" class="w-56 h-56 object-contain rounded-lg">
+      </div>
+
+      <div class="space-y-2 text-left mb-4">
+        <label class="block text-[11px] font-bold text-slate-700 uppercase">Hoặc gửi link trực tiếp qua Zalo / Tin nhắn:</label>
+        <div class="flex items-center gap-2">
+          <input id="mobile-share-link" type="text" readonly class="flex-1 px-3 py-2 text-xs font-mono bg-slate-100 border border-slate-300 rounded-xl outline-none select-all text-slate-600">
+          <button type="button" onclick="window.AppController.copyMobileShareLink()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition shrink-0">
+            📋 Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-800 text-left">
+        💡 <strong>Mẹo:</strong> Sau khi mở trên điện thoại, Thầy/Cô có thể chọn <em>"Thêm vào Màn hình chính" (Add to Home Screen)</em> để dùng như một ứng dụng độc lập mượt mà!
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL BÁO TRẢ THIẾT BỊ ================= -->
+  <div id="modal-return-equipment" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50 to-indigo-50">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span>↩️ Báo Trả Thiết Bị Dạy Học</span>
+        </h3>
+        <button onclick="window.EquipmentSyncEngine.closeReturnModal()" class="w-7 h-7 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+      <form onsubmit="window.EquipmentSyncEngine.handleReturnSubmit(event)" class="p-5 space-y-3.5 text-xs">
+        <input type="hidden" id="return-record-id">
+        <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl">
+          <div class="text-[11px] text-teal-700 font-semibold">Thiết bị hoàn trả:</div>
+          <div id="return-equipment-info" class="font-bold text-teal-950 mt-0.5">...</div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Ngày hoàn trả <span class="text-rose-500">*</span></label>
+          <input type="date" id="return-date-input" required class="w-full px-3 py-2 font-mono bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tình trạng khi trả <span class="text-rose-500">*</span></label>
+          <select id="return-condition-select" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+            <option value="Tốt, hoạt động bình thường">Tốt, hoạt động bình thường</option>
+            <option value="Đầy đủ, nguyên vẹn">Đầy đủ, nguyên vẹn</option>
+            <option value="Cần vệ sinh, bảo dưỡng thêm">Cần vệ sinh, bảo dưỡng thêm</option>
+            <option value="Hỏng hóc nhẹ (Ghi rõ bên dưới)">Hỏng hóc nhẹ (Ghi rõ bên dưới)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Ghi chú bổ sung (nếu có):</label>
+          <textarea id="return-note-input" rows="2" placeholder="Ghi chú về tình trạng sau khi thực hành..." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+        </div>
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="window.EquipmentSyncEngine.closeReturnModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">Hủy</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition shadow-md">Xác nhận Báo trả</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL MƯỢN THIẾT BỊ BỔ SUNG (QUICK BORROW) ================= -->
+  <div id="modal-quick-borrow-equipment" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="modal-panel glass-panel w-full max-w-lg rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50 to-emerald-50">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span>🔬 Mượn Thiết Bị Dạy Học Bổ Sung</span>
+        </h3>
+        <button onclick="window.EquipmentSyncEngine.closeQuickBorrowModal()" class="w-7 h-7 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+      <form onsubmit="window.EquipmentSyncEngine.handleQuickBorrowSubmit(event)" class="p-5 space-y-3.5 text-xs">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Chọn Thiết bị dạy học <span class="text-rose-500">*</span></label>
+          <select id="quick-borrow-equipment-select" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+          </select>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Số lượng <span class="text-rose-500">*</span></label>
+            <input type="number" id="quick-borrow-quantity" value="1" min="1" max="50" required class="w-full px-2.5 py-1.5 text-center font-mono font-bold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Tuần dạy</label>
+            <input type="number" id="quick-borrow-week" value="1" min="1" max="35" class="w-full px-2.5 py-1.5 text-center font-mono bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Ngày mượn <span class="text-rose-500">*</span></label>
+            <input type="date" id="quick-borrow-date" required class="w-full px-2.5 py-1.5 font-mono bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Buổi</label>
+            <select id="quick-borrow-session" class="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="Sáng">Sáng</option>
+              <option value="Chiều">Chiều</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Lớp dạy</label>
+            <input type="text" id="quick-borrow-class" value="9A4" class="w-full px-2.5 py-1.5 font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Tiết dạy</label>
+            <input type="text" id="quick-borrow-period" value="Tiết 1, 2" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Phòng học</label>
+            <input type="text" id="quick-borrow-room" value="Phòng TH KHTN" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nội dung bài dạy / Mục đích mượn <span class="text-rose-500">*</span></label>
+          <input type="text" id="quick-borrow-lesson" required value="Tiết thực hành thí nghiệm KHTN" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="window.EquipmentSyncEngine.closeQuickBorrowModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">Hủy</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition shadow-md">Đăng ký mượn ngay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL IN SỔ SƯ PHẠM A4 CHO TỔ KHTN - CN ================= -->
+  <div id="modal-print-equipment-report" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/75 backdrop-blur-sm overflow-y-auto">
+    <div class="modal-panel bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col my-auto max-h-[95vh]">
+      <div class="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:hidden">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Xem Trước Sổ Sư Phạm Theo Dõi Thiết Bị (A4 Ngang)</h3>
+          <p class="text-[11px] text-slate-500">Tổ Khoa học tự nhiên – Công nghệ • Trường THCS Tây Phú</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.EquipmentSyncEngine.triggerBrowserPrint()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1.5">
+            <span>🖨️ In ra giấy / Lưu PDF</span>
+          </button>
+          <button onclick="window.EquipmentSyncEngine.closePrintModal()" class="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-700 text-xs font-bold transition">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 font-serif text-black print:p-0">
+        <!-- Header Sư Phạm Chuẩn -->
+        <div class="flex justify-between items-start text-center text-xs mb-4">
+          <div class="w-1/2">
+            <p class="uppercase font-normal">PHÒNG GD&ĐT THOẠI SƠN</p>
+            <p class="font-bold uppercase tracking-wider">TRƯỜNG THCS TÂY PHÚ</p>
+            <p class="font-bold text-[11px] mt-0.5 text-teal-800">TỔ KHOA HỌC TỰ NHIÊN - CÔNG NGHỆ</p>
+            <div class="w-24 h-0.5 bg-black mx-auto mt-1"></div>
+          </div>
+          <div class="w-1/2">
+            <p class="font-bold uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+            <p class="font-bold underline underline-offset-4">Độc lập - Tự do - Hạnh phúc</p>
+            <p class="text-[11px] italic mt-1.5">Tây Phú, ngày ... tháng ... năm 2026</p>
+          </div>
+        </div>
+
+        <div class="text-center my-4">
+          <h2 class="text-base sm:text-lg font-bold uppercase tracking-wide">
+            SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC
+          </h2>
+          <p class="text-xs italic mt-0.5">Tổ Khoa học tự nhiên – Công nghệ • Năm học 2026 - 2027</p>
+        </div>
+
+        <!-- Bảng Dữ Liệu Sư Phạm -->
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse border border-black text-[11px]">
+            <thead>
+              <tr class="bg-gray-100 border-b border-black text-center font-bold">
+                <th class="p-1.5 border-r border-black w-8">STT</th>
+                <th class="p-1.5 border-r border-black w-20">Ngày mượn</th>
+                <th class="p-1.5 border-r border-black w-24">Buổi / Tiết</th>
+                <th class="p-1.5 border-r border-black w-14">Lớp</th>
+                <th class="p-1.5 border-r border-black">Tên bài dạy / Chủ đề bài học</th>
+                <th class="p-1.5 border-r border-black">Tên thiết bị dạy học</th>
+                <th class="p-1.5 border-r border-black w-10">SL</th>
+                <th class="p-1.5 border-r border-black w-28">Giáo viên mượn</th>
+                <th class="p-1.5 border-r border-black w-20">Tình trạng</th>
+                <th class="p-1.5 w-24">Người xác nhận</th>
+              </tr>
+            </thead>
+            <tbody id="report-print-tbody" class="divide-y divide-black">
+              <!-- Rendered by window.EquipmentSyncEngine -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Phần Ký Duyệt 3 Bên Theo Đúng Văn Bản -->
+        <div class="mt-8 flex justify-between items-start text-center text-xs">
+          <div class="w-1/3">
+            <p class="font-bold uppercase">HIỆU TRƯỞNG</p>
+            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và đóng dấu)</p>
+            <p class="font-bold text-xs uppercase">HỒ MINH TRIỀU</p>
+          </div>
+          <div class="w-1/3">
+            <p class="font-bold uppercase">TỔ TRƯỞNG KHTN - CN</p>
+            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và ghi rõ họ tên)</p>
+            <p class="font-bold text-xs uppercase">VÕ VĂN HÀ</p>
+          </div>
+          <div class="w-1/3">
+            <p class="font-bold uppercase">CÁN BỘ THIẾT BỊ</p>
+            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và ghi rõ họ tên)</p>
+            <p class="font-bold text-xs uppercase">NGUYỄN SỸ TUẤN</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-14 py-6 border-t border-slate-200/80 bg-white/70 backdrop-blur-sm text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800 font-heading">📚 TRƯỜNG THCS TÂY PHÚ</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-600">Hệ thống Quản lý & Kiểm tra Kế hoạch bài dạy</span>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-2 text-[11px]">
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+          <span>👨‍💼 Quản trị hệ thống:</span>
+          <strong>Võ Văn Hà - Giáo viên THCS Tây Phú</strong>
+        </span>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+          <span>🚀 Phiên bản mới nhất:</span>
+          <span>v2.5.2 (12/09/2026)</span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/drive-api.js"></script>
+  <script src="js/signature.js"></script>
+  <script src="js/ai-evaluator.js"></script>
+  <script src="js/equipment-sync.js"></script>
+  <script src="js/ui-teacher.js"></script>
+  <script src="js/ui-reviewer.js"></script>
+  <script src="js/ui-admin.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
