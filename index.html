@@ -1818,9 +1818,47 @@
         </button>
       </div>
       <form onsubmit="window.EquipmentSyncEngine.handleQuickBorrowSubmit(event)" class="p-5 space-y-3.5 text-xs">
+        <!-- BỘ LỌC CHỌN NHANH THEO MÔN & KHỐI -->
+        <div class="p-3 bg-gradient-to-r from-teal-50/90 to-emerald-50/90 border border-teal-200/90 rounded-xl space-y-2.5 shadow-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-teal-900 flex items-center gap-1.5 tracking-tight">
+              <span>🎯</span>
+              <span>LỌC THEO MÔN & KHỐI LỚP:</span>
+            </span>
+            <span id="quick-borrow-filtered-count" class="text-[10px] font-bold text-teal-800 bg-white px-2.5 py-0.5 rounded-full border border-teal-200 shadow-xs">
+              318 thiết bị
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-teal-800 uppercase mb-0.5">Môn học</label>
+              <select id="quick-borrow-filter-subject" onchange="window.EquipmentSyncEngine.filterQuickBorrowSelect()" class="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer shadow-xs">
+                <option value="ALL">-- Tất cả môn (318 TB) --</option>
+                <option value="Khoa học tự nhiên">Khoa học tự nhiên (230 TB)</option>
+                <option value="Công nghệ">Công nghệ (85 TB)</option>
+                <option value="Dùng chung">Dùng chung (3 TB)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-teal-800 uppercase mb-0.5">Khối lớp</label>
+              <select id="quick-borrow-filter-grade" onchange="window.EquipmentSyncEngine.filterQuickBorrowSelect()" class="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer shadow-xs">
+                <option value="ALL">-- Tất cả các khối --</option>
+                <option value="Khối 6">Khối 6 (83 TB)</option>
+                <option value="Khối 7">Khối 7 (73 TB)</option>
+                <option value="Khối 8">Khối 8 (85 TB)</option>
+                <option value="Khối 9">Khối 9 (74 TB)</option>
+              </select>
+            </div>
+          </div>
+          <div class="relative">
+            <input type="text" id="quick-borrow-filter-search" oninput="window.EquipmentSyncEngine.filterQuickBorrowSelect()" placeholder="🔍 Gõ tên thiết bị hoặc bài dạy để tìm nhanh..." class="w-full pl-3 pr-8 py-1.5 text-xs bg-white border border-teal-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 shadow-xs">
+            <button type="button" onclick="document.getElementById('quick-borrow-filter-search').value=''; window.EquipmentSyncEngine.filterQuickBorrowSelect();" class="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs" title="Xóa tìm kiếm">✕</button>
+          </div>
+        </div>
+
         <div>
           <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Chọn Thiết bị dạy học <span class="text-rose-500">*</span></label>
-          <select id="quick-borrow-equipment-select" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+          <select id="quick-borrow-equipment-select" required onchange="window.EquipmentSyncEngine.onQuickBorrowSelectChange(this.value)" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium text-xs">
           </select>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

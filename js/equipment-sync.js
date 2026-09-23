@@ -5289,57 +5289,147 @@
       }
     }
 
+    // Lọc danh sách thiết bị trong modal mượn nhanh theo Môn, Khối, và Từ khóa
+    filterQuickBorrowSelect(preferredCode = null) {
+      const selectEl = document.getElementById('quick-borrow-equipment-select');
+      if (!selectEl) return;
+
+      const subFilter = document.getElementById('quick-borrow-filter-subject')?.value || 'ALL';
+      const grdFilter = document.getElementById('quick-borrow-filter-grade')?.value || 'ALL';
+      const searchFilter = (document.getElementById('quick-borrow-filter-search')?.value || '').trim().toLowerCase();
+      const countEl = document.getElementById('quick-borrow-filtered-count');
+
+      const allEqs = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
+
+      const filtered = allEqs.filter(eq => {
+        // Lọc môn
+        if (subFilter !== 'ALL') {
+          if (!(eq.subject || '').includes(subFilter)) return false;
+        }
+        // Lọc khối
+        if (grdFilter !== 'ALL') {
+          const gNum = grdFilter.replace(/[^0-9]/g, '');
+          if (gNum) {
+            if (!(eq.grade || '').includes(gNum)) return false;
+          } else {
+            if (!(eq.grade || '').includes(grdFilter)) return false;
+          }
+        }
+        // Tìm kiếm nhanh tên, mã, bài dạy
+        if (searchFilter) {
+          const matchCode = (eq.code || '').toLowerCase().includes(searchFilter);
+          const matchName = (eq.name || '').toLowerCase().includes(searchFilter);
+          const matchLesson = (eq.lesson || '').toLowerCase().includes(searchFilter);
+          if (!matchCode && !matchName && !matchLesson) return false;
+        }
+        return true;
+      });
+
+      if (countEl) {
+        countEl.textContent = `${filtered.length} thiết bị`;
+      }
+
+      if (filtered.length === 0) {
+        selectEl.innerHTML = '<option value="" disabled selected>-- Không có thiết bị nào phù hợp bộ lọc --</option>';
+        return;
+      }
+
+      // Nhóm theo Môn & Khối để hiển thị có tổ chức
+      const groupMap = new Map();
+      filtered.forEach(eq => {
+        const sub = eq.subject || 'Khác';
+        const grd = eq.grade || 'Dùng chung';
+        const key = `${sub} - ${grd}`;
+        if (!groupMap.has(key)) groupMap.set(key, []);
+        groupMap.get(key).push(eq);
+      });
+
+      let html = '';
+      for (const [groupName, items] of groupMap.entries()) {
+        html += `<optgroup label="${groupName} (${items.length} thiết bị)">`;
+        items.forEach(eq => {
+          const avail = eq.available > 0 ? `(Còn ${eq.available} ${eq.unit})` : `(ĐÃ HẾT)`;
+          const shortName = eq.name.length > 85 ? eq.name.substring(0, 85) + '...' : eq.name;
+          html += `<option value="${eq.code}" ${eq.available <= 0 ? 'disabled' : ''}>[${eq.code}] ${shortName} ${avail}</option>`;
+        });
+        html += `</optgroup>`;
+      }
+      selectEl.innerHTML = html;
+
+      // Chọn option: ưu tiên preferredCode, nếu không thì giữ giá trị hiện tại (nếu còn trong filtered), nếu không thì chọn option đầu tiên có sẵn
+      if (preferredCode && filtered.some(e => e.code === preferredCode)) {
+        selectEl.value = preferredCode;
+      } else {
+        const firstAvailable = filtered.find(e => e.available > 0) || filtered[0];
+        if (firstAvailable) {
+          selectEl.value = firstAvailable.code;
+        }
+      }
+
+      this.onQuickBorrowSelectChange(selectEl.value);
+    }
+
+    // Tự động điền thông tin bài học, phòng học, tuần, lớp khi chọn thiết bị
+    onQuickBorrowSelectChange(code) {
+      if (!code) return;
+      const allEqs = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
+      const foundEq = allEqs.find(e => e.code === code);
+      if (!foundEq) return;
+
+      const lessonInput = document.getElementById('quick-borrow-lesson');
+      const roomInput = document.getElementById('quick-borrow-room');
+      const weekInput = document.getElementById('quick-borrow-week');
+      const classInput = document.getElementById('quick-borrow-class');
+      const quantityInput = document.getElementById('quick-borrow-quantity');
+
+      if (lessonInput && foundEq.lesson) lessonInput.value = foundEq.lesson;
+      if (roomInput) roomInput.value = foundEq.room || foundEq.location || 'Phòng TH KHTN';
+      if (weekInput && foundEq.week) {
+        const matchW = foundEq.week.match(/Tuần\s*(\d+)/i);
+        if (matchW) weekInput.value = matchW[1];
+      }
+      if (classInput && foundEq.grade) {
+        const gNum = foundEq.grade.match(/\d+/);
+        if (gNum) {
+          const currentClass = (classInput.value || '').trim();
+          if (!currentClass.startsWith(gNum[0])) {
+            classInput.value = gNum[0] === '9' ? '9A4' : `${gNum[0]}A1`;
+          }
+        }
+      }
+      if (quantityInput) {
+        const maxAvail = Math.max(1, foundEq.available || 1);
+        quantityInput.max = maxAvail;
+        if (parseInt(quantityInput.value) > maxAvail) {
+          quantityInput.value = 1;
+        }
+      }
+    }
+
     // Mở modal mượn thiết bị nhanh (hỗ trợ truyền presetCode để tự động chọn thiết bị)
     openQuickBorrowModal(presetCode = null) {
       const modal = document.getElementById('modal-quick-borrow-equipment');
       if (!modal) return;
 
-      const selectEl = document.getElementById('quick-borrow-equipment-select');
       const allEqs = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
+      const subSelect = document.getElementById('quick-borrow-filter-subject');
+      const grdSelect = document.getElementById('quick-borrow-filter-grade');
+      const searchInput = document.getElementById('quick-borrow-filter-search');
 
-      if (selectEl) {
-        // Nhóm thiết bị chuyên biệt theo môn và khối chuẩn xác
-        const groups = [
-          { label: 'Khoa học tự nhiên - Khối 6 (65 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('6')) },
-          { label: 'Khoa học tự nhiên - Khối 7 (53 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('7')) },
-          { label: 'Khoa học tự nhiên - Khối 8 (57 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('8')) },
-          { label: 'Khoa học tự nhiên - Khối 9 (55 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('9')) },
-          { label: 'Công nghệ - Khối 6 (18 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('6')) },
-          { label: 'Công nghệ - Khối 7 (20 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('7')) },
-          { label: 'Công nghệ - Khối 8 (28 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('8')) },
-          { label: 'Công nghệ - Khối 9 (19 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('9')) },
-          { label: 'Thiết bị dùng chung (3 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Dùng chung')) }
-        ];
+      if (searchInput) searchInput.value = '';
 
-        selectEl.innerHTML = groups.map(g => `
-          <optgroup label="${g.label}">
-            ${g.items.map(eq => {
-              const avail = eq.available > 0 ? `(Còn ${eq.available} ${eq.unit})` : `(ĐÃ HẾT)`;
-              return `<option value="${eq.code}" ${eq.available <= 0 ? 'disabled' : ''}>[${eq.code}] ${eq.name} ${avail}</option>`;
-            }).join('')}
-          </optgroup>
-        `).join('');
-
-        if (presetCode) {
-          selectEl.value = presetCode;
-        }
-      }
-
-      // Tự động điền bài học và phòng nếu được chọn sẵn từ bảng danh mục
       if (presetCode) {
-        const foundEq = allEqs.find(e => e.code === presetCode);
-        if (foundEq) {
-          const lessonInput = document.getElementById('quick-borrow-lesson');
-          const roomInput = document.getElementById('quick-borrow-room');
-          const weekInput = document.getElementById('quick-borrow-week');
-          if (lessonInput && foundEq.lesson) lessonInput.value = foundEq.lesson;
-          if (roomInput) roomInput.value = foundEq.room || foundEq.location || 'Phòng TH KHTN';
-          if (weekInput && foundEq.week) {
-            const matchW = foundEq.week.match(/Tuần\s*(\d+)/i);
-            if (matchW) weekInput.value = matchW[1];
-          }
+        const found = allEqs.find(e => e.code === presetCode);
+        if (found) {
+          if (subSelect && found.subject) subSelect.value = found.subject;
+          if (grdSelect && found.grade) subSelect ? (grdSelect.value = found.grade) : null;
         }
+      } else {
+        if (subSelect) subSelect.value = 'ALL';
+        if (grdSelect) grdSelect.value = 'ALL';
       }
+
+      this.filterQuickBorrowSelect(presetCode);
 
       const dateEl = document.getElementById('quick-borrow-date');
       if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
