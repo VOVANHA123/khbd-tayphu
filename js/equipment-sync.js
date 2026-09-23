@@ -11,7 +11,7 @@
 
   const DEFAULT_FIREBASE_DB_URL = "https://thidua-lop-9a4-79dca-default-rtdb.asia-southeast1.firebasedatabase.app";
   const FIREBASE_DB_PATH = 'thiet_bi_2026/data';
-  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V5';
+  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V7';
   const CLIENT_SESSION_ID = 'khbd_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString().slice(-4);
   const localBroadcast = ('BroadcastChannel' in window) ? new BroadcastChannel('thietbi_cross_tab_sync_v2') : null;
 
@@ -4771,6 +4771,72 @@
     }
 
     // Danh sách thiết bị phù hợp cho Tổ KHTN - CN và Dùng chung
+    // Xác định Cán bộ thiết bị xác nhận theo tên giáo viên
+    // Các GV: Trương Thiện Tánh, Trương Thị Thủy Tiên, Đặng Thị Ngọc Yến -> Diệp Văn Long; các GV khác -> Nguyễn Sỹ Tuấn
+    getStaffConfirmByTeacher(teacherName) {
+      if (!teacherName) return "Nguyễn Sỹ Tuấn";
+      const nameNorm = teacherName.trim().toLowerCase();
+      const diepVanLongTeachers = [
+        'trương thiện tánh',
+        'truong thien tanh',
+        'trương thị thủy tiên',
+        'truong thi thuy tien',
+        'đặng thị ngọc yến',
+        'dang thi ngoc yen'
+      ];
+      if (diepVanLongTeachers.some(t => nameNorm.includes(t) || t.includes(nameNorm))) {
+        return "Diệp Văn Long";
+      }
+      return "Nguyễn Sỹ Tuấn";
+    }
+
+    // Đếm số lớp dạy của một bài học để tính số lượt mượn tương ứng (VD: 9A1, 9A2, 9A3, 9A4 = 4 lượt)
+    normalizeTeacherName(name) {
+      if (!name || typeof name !== 'string') return '';
+      return name.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    countClassTurns(classStr) {
+      if (!classStr || typeof classStr !== 'string') return 1;
+      const str = classStr.trim();
+      if (!str) return 1;
+
+      // Nhận diện dạng dải lớp: 9A1-9A4, 9A1 - 9A4, 9A1 đến 9A4, 7A1-7A4...
+      const rangeMatch = str.match(/([6-9])\s*[A-Za-z]+(\d+)\s*(?:[-–—]|đến|to)\s*(?:[6-9]\s*[A-Za-z]+)?(\d+)/i);
+      if (rangeMatch) {
+        const start = parseInt(rangeMatch[2], 10);
+        const end = parseInt(rangeMatch[3], 10);
+        if (!isNaN(start) && !isNaN(end) && end >= start && (end - start) < 10) {
+          return end - start + 1;
+        }
+      }
+
+      // Nhận diện theo tên Khối chung: Khối 9, Khối 8, Khối 7, Khối 6, K9, K8, K7, K6 (THCS Tây Phú có 4 lớp/khối: A1..A4)
+      if (/^(toàn\s*khoá\s*|toàn\s*khối\s*|khoi\s*|khối\s*|k)([6-9])$/i.test(str)) {
+        return 4;
+      }
+
+      // Tìm tất cả các mẫu lớp học chuẩn THCS như 9A1, 9A2, 8A3, 7A4, 6A2...
+      const patternMatches = str.match(/[6-9]\s*[A-Za-z]+[0-9]*/g);
+      if (patternMatches && patternMatches.length > 0) {
+        return patternMatches.length;
+      }
+
+      // Tách theo các dấu phân cách thông dụng nếu không khớp pattern trên
+      const parts = str.split(/[,;\/+\-&|]|\bvà\b|\bva\b/i)
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+      return Math.max(1, parts.length);
+    }
+
+    // Định dạng ngày hiển thị dd/mm/yyyy
+    formatDateVN(dateStr) {
+      if (!dateStr || typeof dateStr !== 'string') return '';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dateStr;
+    }
+
     // Lọc thiết bị chính xác theo Môn và Khối lớp
     getEquipmentsBySubjectAndGrade(subject, grade) {
       if (!this.equipments || this.equipments.length === 0) {
@@ -4854,7 +4920,7 @@
         status: "Đang mượn",
         returnDate: "",
         conditionReturn: "",
-        staffConfirm: "Nguyễn Sỹ Tuấn",
+        staffConfirm: this.getStaffConfirmByTeacher(planData.tacGiaTen || (user ? user.name : '')),
         planId: planData.id || '',
         createdAt: new Date().toISOString()
       };
@@ -4919,7 +4985,7 @@
         status: "Đang mượn",
         returnDate: "",
         conditionReturn: "",
-        staffConfirm: "Nguyễn Sỹ Tuấn",
+        staffConfirm: this.getStaffConfirmByTeacher(user ? user.name : ''),
         createdAt: new Date().toISOString()
       };
 
@@ -4930,20 +4996,24 @@
       return newRecord;
     }
 
-    // Giáo viên báo trả thiết bị
+    // Giáo viên báo trả / cập nhật ngày trả thiết bị
     async returnEquipment(recordId, returnData) {
       const record = this.borrowRecords.find(r => r.id === recordId);
       if (!record) throw new Error('Không tìm thấy phiếu mượn thiết bị này!');
 
+      const wasAlreadyReturned = (record.status === "Đã trả");
       record.status = "Đã trả";
-      record.returnDate = returnData.returnDate || new Date().toISOString().split('T')[0];
-      record.conditionReturn = returnData.conditionReturn || "Tốt, hoạt động bình thường";
-      record.returnNote = returnData.returnNote || "";
+      record.returnDate = (returnData && returnData.returnDate) ? returnData.returnDate : new Date().toISOString().split('T')[0];
+      record.conditionReturn = (returnData && returnData.conditionReturn) || "Tốt, hoạt động bình thường";
+      record.returnNote = (returnData && returnData.returnNote) || "";
+      record.staffConfirm = this.getStaffConfirmByTeacher(record.teacherName);
 
-      // Trả lại số lượng khả dụng
-      const eq = this.equipments.find(e => e.code === record.equipmentCode);
-      if (eq) {
-        eq.available = Math.min(eq.total, eq.available + (record.quantity || 1));
+      // Trả lại số lượng khả dụng nếu trước đó đang mượn
+      if (!wasAlreadyReturned) {
+        const eq = this.equipments.find(e => e.code === record.equipmentCode);
+        if (eq) {
+          eq.available = Math.min(eq.total, eq.available + (record.quantity || 1));
+        }
       }
 
       await this.pushToCloud();
@@ -4956,7 +5026,7 @@
       const record = this.borrowRecords.find(r => r.id === recordId);
       if (!record) return;
 
-      record.staffConfirm = staffName || "Nguyễn Sỹ Tuấn";
+      record.staffConfirm = staffName || this.getStaffConfirmByTeacher(record.teacherName);
       if (record.status !== "Đã trả") {
         record.status = "Đã trả";
         record.returnDate = new Date().toISOString().split('T')[0];
@@ -5035,6 +5105,7 @@
         if (secCatalog) secCatalog.style.display = 'block';
         if (secTracking) secTracking.style.display = 'none';
         this.renderEquipmentCatalogTable();
+      this.renderInlineTeacherStats();
       } else {
         if (btnCatalog) {
           btnCatalog.className = "px-4 py-2 rounded-xl bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs border border-slate-200 transition flex items-center gap-1.5";
@@ -5278,35 +5349,56 @@
       tbody.innerHTML = records.map((r, index) => {
         const isBorrowed = r.status === 'Đang mượn';
         const isMine = user && (user.name === r.teacherName || user.id === r.teacherId);
-        
+        const classTurns = this.countClassTurns(r.className);
+        const returnDateFmt = this.formatDateVN(r.returnDate);
+
         let statusBadge = '';
         if (r.status === 'Đang mượn') {
           statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Đang mượn</span>`;
         } else if (r.status === 'Đã trả') {
-          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Đã trả (${r.returnDate || 'Hôm nay'})</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Ngày trả: ${r.returnDate || ''}">✓ Đã trả (${returnDateFmt || 'Hôm nay'})</span>`;
         } else {
           statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Quá hạn</span>`;
         }
 
+        const staffConfirmName = r.staffConfirm || this.getStaffConfirmByTeacher(r.teacherName);
+
         let actionHtml = '';
-        if (isBorrowed) {
-          if (isMine || isManager) {
+        if (isManager) {
+          // Admin / Quản trị viên luôn có quyền điều chỉnh ngày trả và thông tin cho mọi phiếu
+          actionHtml += `
+            <button onclick="window.EquipmentSyncEngine.openReturnModal('${r.id}')" class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition shadow-xs flex items-center gap-1" title="Admin điều chỉnh ngày trả và lớp dạy">
+              <span>⚙️ Sửa ngày trả</span>
+            </button>
+          `;
+          if (isBorrowed) {
             actionHtml += `
-              <button onclick="window.EquipmentSyncEngine.openReturnModal('${r.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition shadow-sm flex items-center gap-1">
-                <span>↩ Báo trả</span>
-              </button>
-            `;
-          }
-          if (isManager) {
-            actionHtml += `
-              <button onclick="window.EquipmentSyncEngine.confirmReturn('${r.id}', '${user ? user.name : 'Võ Văn Hà'}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-sm flex items-center gap-1">
+              <button onclick="window.EquipmentSyncEngine.confirmReturn('${r.id}', '${user ? user.name : 'Võ Văn Hà'}')" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-xs flex items-center gap-1" title="Xác nhận đã nhận lại đồ">
                 <span>✓ Nhận đồ</span>
               </button>
             `;
           }
         } else {
-          actionHtml = `<span class="text-[11px] text-slate-400">CB: ${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</span>`;
+          // Giáo viên thường
+          if (isBorrowed) {
+            if (isMine) {
+              actionHtml += `
+                <button onclick="window.EquipmentSyncEngine.openReturnModal('${r.id}')" class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold transition shadow-sm flex items-center gap-1" title="Báo trả thiết bị và cập nhật ngày trả">
+                  <span>↩ Trả thiết bị</span>
+                </button>
+              `;
+            }
+          } else {
+            if (isMine) {
+              actionHtml += `
+                <button onclick="window.EquipmentSyncEngine.openReturnModal('${r.id}')" class="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] font-semibold border border-teal-200 transition shadow-xs flex items-center gap-1" title="Cập nhật lại ngày trả">
+                  <span>📅 Đổi ngày trả</span>
+                </button>
+              `;
+            }
+          }
         }
+        actionHtml += `<span class="text-[11px] text-slate-500 font-medium ml-1">CB: ${staffConfirmName}</span>`;
 
         if (isManager) {
           actionHtml += `
@@ -5324,12 +5416,16 @@
           <tr class="hover:bg-blue-50/40 transition border-b border-slate-100 text-xs">
             <td class="px-3 py-3 text-center font-mono text-slate-400">${index + 1}</td>
             <td class="px-3 py-3">
-              <div class="font-bold text-slate-800">${r.date || '---'}</div>
-              <div class="text-[11px] text-slate-500">${r.session || 'Sáng'} • ${r.period || ''}</div>
+              <div class="font-bold text-slate-800">Mượn: ${r.date || '---'}</div>
+              <div class="text-[11px] text-emerald-700 font-semibold">${r.status === 'Đã trả' ? ('Trả: ' + (returnDateFmt || 'Đã trả')) : '<span class="text-amber-600 font-normal">Chưa trả</span>'}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">${r.session || 'Sáng'} • ${r.period || ''}</div>
             </td>
             <td class="px-3 py-3">
               <span class="inline-block px-2 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700 text-[11px] border border-indigo-100">${r.className || '9A4'}</span>
-              <div class="text-[10px] text-slate-400 mt-0.5">Tuần ${r.week || 1}</div>
+              <div class="mt-1 flex items-center gap-1">
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200" title="Số lượt tính trong Bảng Thống Kê">${classTurns} lượt</span>
+                <span class="text-[10px] text-slate-400">Tuần ${r.week || 1}</span>
+              </div>
             </td>
             <td class="px-3 py-3 max-w-xs">
               <div class="font-semibold text-slate-800 truncate" title="${r.lessonTitle}">${r.lessonTitle}</div>
@@ -5358,7 +5454,7 @@
       setTimeout(() => this.updateStickyScrollbar(), 60);
     }
 
-    // Mở modal báo trả
+    // Mở modal báo trả / điều chỉnh ngày trả & thông tin phiếu mượn (Dành cho Giáo viên & Admin)
     openReturnModal(recordId) {
       const record = this.borrowRecords.find(r => r.id === recordId);
       if (!record) return;
@@ -5366,11 +5462,50 @@
       const modal = document.getElementById('modal-return-equipment');
       if (!modal) return;
 
+      const isAdmin = this.isAdminOrLeader();
+      const titleEl = document.getElementById('modal-return-equipment-title');
+      const submitBtn = document.getElementById('modal-return-submit-btn');
+      const adminFields = document.getElementById('return-admin-fields');
+
+      if (titleEl) {
+        if (isAdmin) {
+          titleEl.innerHTML = '<span>⚙️ [Admin] Điều Chỉnh Ngày Trả & Phiếu Mượn</span>';
+        } else if (record.status === 'Đã trả') {
+          titleEl.innerHTML = '<span>📅 Điều Chỉnh Ngày Trả Thiết Bị</span>';
+        } else {
+          titleEl.innerHTML = '<span>↩️ Báo Trả Thiết Bị Dạy Học</span>';
+        }
+      }
+
+      if (submitBtn) {
+        submitBtn.innerText = isAdmin ? 'Lưu Thay Đổi (Admin)' : (record.status === 'Đã trả' ? 'Lưu Ngày Trả Mới' : 'Xác Nhận Trả Thiết Bị');
+      }
+
+      if (adminFields) {
+        adminFields.style.display = isAdmin ? 'block' : 'none';
+      }
+
       document.getElementById('return-record-id').value = record.id;
-      document.getElementById('return-equipment-info').innerText = `${record.equipmentName} (SL: ${record.quantity}) - Mượn ngày ${record.date}`;
-      document.getElementById('return-date-input').value = new Date().toISOString().split('T')[0];
-      document.getElementById('return-condition-select').value = "Tốt, hoạt động bình thường";
-      document.getElementById('return-note-input').value = "";
+      document.getElementById('return-equipment-info').innerHTML = `<b>${record.equipmentName}</b> (SL: ${record.quantity || 1})<br><span class="text-slate-500">Giáo viên: ${record.teacherName || ''} • Mượn ngày: ${record.date || ''}</span>`;
+      document.getElementById('return-date-input').value = record.returnDate || new Date().toISOString().split('T')[0];
+      
+      const statusSelect = document.getElementById('return-status-select');
+      if (statusSelect) {
+        statusSelect.value = record.status || 'Đã trả';
+      }
+
+      const classInput = document.getElementById('return-class-input');
+      if (classInput) {
+        classInput.value = record.className || '9A4';
+      }
+
+      const staffSelect = document.getElementById('return-staff-select');
+      if (staffSelect) {
+        staffSelect.value = record.staffConfirm || this.getStaffConfirmByTeacher(record.teacherName);
+      }
+
+      document.getElementById('return-condition-select').value = record.conditionReturn || "Tốt, hoạt động bình thường";
+      document.getElementById('return-note-input').value = record.returnNote || "";
 
       modal.classList.add('active');
     }
@@ -5384,17 +5519,47 @@
       e.preventDefault();
       const recordId = document.getElementById('return-record-id').value;
       const returnDate = document.getElementById('return-date-input').value;
+      const statusSelect = document.getElementById('return-status-select');
+      const status = statusSelect ? statusSelect.value : 'Đã trả';
+      const classInput = document.getElementById('return-class-input');
+      const className = classInput ? classInput.value.trim() : null;
+      const staffSelect = document.getElementById('return-staff-select');
+      const staffConfirm = staffSelect ? staffSelect.value : null;
       const conditionReturn = document.getElementById('return-condition-select').value;
       const returnNote = document.getElementById('return-note-input').value;
 
       try {
-        await this.returnEquipment(recordId, { returnDate, conditionReturn, returnNote });
+        const record = this.borrowRecords.find(r => r.id === recordId);
+        if (!record) throw new Error('Không tìm thấy phiếu mượn thiết bị này!');
+
+        const wasAlreadyReturned = (record.status === "Đã trả");
+        record.status = status;
+        record.returnDate = (status === 'Đã trả') ? (returnDate || new Date().toISOString().split('T')[0]) : '';
+        record.conditionReturn = conditionReturn || "Tốt, hoạt động bình thường";
+        record.returnNote = returnNote || "";
+
+        if (className) record.className = className;
+        if (staffConfirm) record.staffConfirm = staffConfirm;
+        else record.staffConfirm = this.getStaffConfirmByTeacher(record.teacherName);
+
+        // Trả lại số lượng khả dụng nếu chuyển sang Đã trả
+        if (status === 'Đã trả' && !wasAlreadyReturned) {
+          const eq = this.equipments.find(e => e.code === record.equipmentCode);
+          if (eq) eq.available = Math.min(eq.total, eq.available + (record.quantity || 1));
+        } else if (status === 'Đang mượn' && wasAlreadyReturned) {
+          // Trừ lại số lượng nếu chuyển lại Đang mượn
+          const eq = this.equipments.find(e => e.code === record.equipmentCode);
+          if (eq) eq.available = Math.max(0, eq.available - (record.quantity || 1));
+        }
+
+        await this.pushToCloud();
+        this.renderEquipmentView();
         this.closeReturnModal();
         if (window.AppToast) {
-          window.AppToast.show('Đã báo trả thiết bị thành công! Dữ liệu đã đồng bộ lên Cloud.', 'success');
+          window.AppToast.show('🎉 Đã cập nhật ngày trả & thông tin phiếu mượn thành công!', 'success');
         }
       } catch (err) {
-        alert(err.message || 'Lỗi khi báo trả thiết bị!');
+        alert(err.message || 'Lỗi khi cập nhật phiếu mượn!');
       }
     }
 
@@ -5633,7 +5798,8 @@
 
       // Khởi tạo trước đúng thứ tự 10 giáo viên
       defaultTeachers.forEach(t => {
-        statsMap.set(t.name, {
+        const normKey = this.normalizeTeacherName(t.name);
+        statsMap.set(normKey, {
           teacherName: t.name,
           subject: t.subject,
           khtnCount: 0,
@@ -5647,7 +5813,8 @@
       // Thống kê chi tiết từ các bản ghi mượn
       records.forEach(r => {
         const teacherName = r.teacherName || 'Chưa xác định';
-        let s = statsMap.get(teacherName);
+        const normKey = this.normalizeTeacherName(teacherName);
+        let s = statsMap.get(normKey);
         if (!s) {
           s = {
             teacherName: teacherName,
@@ -5658,19 +5825,23 @@
             returnedCount: 0,
             borrowingCount: 0
           };
-          statsMap.set(teacherName, s);
+          statsMap.set(normKey, s);
         }
-        s.totalCount += 1;
+
+        // Trong BẢNG THỐNG KÊ SỐ LƯỢT MƯỢN THIẾT BỊ: số lượt mượn mỗi môn học bằng số lớp dạy của bài đó (VD: 9A1, 9A2, 9A3, 9A4 = 4 lượt)
+        const classTurns = this.countClassTurns(r.className);
+
+        s.totalCount += classTurns;
         const sub = (r.subject || '').toLowerCase();
         if (sub.includes('công nghệ')) {
-          s.cnCount += 1;
+          s.cnCount += classTurns;
         } else {
-          s.khtnCount += 1;
+          s.khtnCount += classTurns;
         }
         if (r.status === 'Đã trả') {
-          s.returnedCount += 1;
+          s.returnedCount += classTurns;
         } else {
-          s.borrowingCount += 1;
+          s.borrowingCount += classTurns;
         }
       });
 
@@ -5684,6 +5855,56 @@
     }
 
     // Kết xuất nội dung văn bản in và thống kê chuẩn Nghị định 30 (Times New Roman, A4 ngang)
+
+    // Hiển thị Bảng Thống Kê Số Lượt Mượn trực tiếp trên Web
+    renderInlineTeacherStats() {
+      const statsTbody = document.getElementById('eq-inline-stats-tbody');
+      if (!statsTbody) return;
+
+      const records = this.borrowRecords || [];
+      const stats = this.generateTeacherBorrowStats(records);
+
+      let totalKhtn = 0;
+      let totalCn = 0;
+      let totalAll = 0;
+      let totalReturned = 0;
+      let totalBorrowing = 0;
+
+      stats.forEach(s => {
+        totalKhtn += s.khtnCount;
+        totalCn += s.cnCount;
+        totalAll += s.totalCount;
+        totalReturned += s.returnedCount;
+        totalBorrowing += s.borrowingCount;
+      });
+
+      const rowsHtml = stats.map((s, i) => `
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+          <td class="px-3 py-2 text-center font-mono font-bold text-slate-500">${i + 1}</td>
+          <td class="px-3 py-2 font-bold text-slate-800">${s.teacherName}</td>
+          <td class="px-3 py-2 text-slate-500">${s.subject}</td>
+          <td class="px-3 py-2 text-center font-mono font-bold text-teal-700 bg-teal-50/50">${s.khtnCount}</td>
+          <td class="px-3 py-2 text-center font-mono font-bold text-indigo-700 bg-indigo-50/50">${s.cnCount}</td>
+          <td class="px-3 py-2 text-center font-mono font-bold text-slate-900 bg-slate-100">${s.totalCount}</td>
+          <td class="px-3 py-2 text-center font-mono font-bold text-emerald-700">${s.returnedCount}</td>
+          <td class="px-3 py-2 text-center font-mono font-bold text-amber-700">${s.borrowingCount}</td>
+        </tr>
+      `).join('');
+
+      const totalRowHtml = `
+        <tr class="bg-gradient-to-r from-slate-100 via-teal-50 to-slate-100 font-bold border-t-2 border-slate-300 text-xs">
+          <td colspan="3" class="px-3 py-2.5 text-center uppercase tracking-wider text-slate-800">TỔNG CỘNG TOÀN TỔ</td>
+          <td class="px-3 py-2.5 text-center font-mono text-teal-800 font-extrabold">${totalKhtn}</td>
+          <td class="px-3 py-2.5 text-center font-mono text-indigo-800 font-extrabold">${totalCn}</td>
+          <td class="px-3 py-2.5 text-center font-mono text-slate-900 font-extrabold bg-slate-200">${totalAll}</td>
+          <td class="px-3 py-2.5 text-center font-mono text-emerald-800 font-extrabold">${totalReturned}</td>
+          <td class="px-3 py-2.5 text-center font-mono text-amber-800 font-extrabold">${totalBorrowing}</td>
+        </tr>
+      `;
+
+      statsTbody.innerHTML = rowsHtml + totalRowHtml;
+    }
+
     renderPrintReportContent() {
       const period = this.currentPrintPeriod || 'ALL';
       const records = this.getRecordsByPeriod(period);
@@ -5717,15 +5938,19 @@
       if (mainTitle) mainTitle.textContent = `SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC - ${periodLabel}`;
       if (subTitle) subTitle.textContent = periodSubLabel;
 
-      // Render bảng mượn trả chi tiết
+      // Render bảng mượn trả chi tiết (CÓ CỘT NGÀY TRẢ RIÊNG BIỆT)
       if (tbody) {
         if (records.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 12px; font-style: italic; color: #666; font-family: 'Times New Roman', Times, serif;">Chưa có lượt mượn thiết bị nào trong ${periodSubLabel.toLowerCase()}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 12px; font-style: italic; color: #666; font-family: 'Times New Roman', Times, serif;">Chưa có lượt mượn thiết bị nào trong ${periodSubLabel.toLowerCase()}</td></tr>`;
         } else {
-          tbody.innerHTML = records.map((r, i) => `
+          tbody.innerHTML = records.map((r, i) => {
+            const dateReturnFmt = this.formatDateVN(r.returnDate);
+            const staffConfirmDisp = r.staffConfirm || this.getStaffConfirmByTeacher(r.teacherName);
+            return `
             <tr style="border-bottom: 1px solid black; text-align: center; font-family: 'Times New Roman', Times, serif;">
               <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${i + 1}</td>
               <td style="padding: 4px; border: 1px solid black;">${r.date || ''}</td>
+              <td style="padding: 4px; border: 1px solid black; font-weight: 500; color: #047857;">${dateReturnFmt || '-'}</td>
               <td style="padding: 4px; border: 1px solid black;">${r.session || 'Sáng'} (${r.period || ''})</td>
               <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${r.className || ''}</td>
               <td style="padding: 4px; border: 1px solid black; text-align: left;">${r.lessonTitle || ''}</td>
@@ -5733,16 +5958,31 @@
               <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${r.quantity || 1}</td>
               <td style="padding: 4px; border: 1px solid black; text-align: left;">${r.teacherName || ''}</td>
               <td style="padding: 4px; border: 1px solid black;">${r.status || 'Đang mượn'}</td>
-              <td style="padding: 4px; border: 1px solid black;">${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</td>
+              <td style="padding: 4px; border: 1px solid black;">${staffConfirmDisp}</td>
             </tr>
-          `).join('');
+          `;
+          }).join('');
         }
       }
 
-      // Render bảng thống kê lượt mượn theo giáo viên
+      // Render bảng thống kê lượt mượn theo giáo viên (CÓ DÒNG TỔNG CỘNG HÀNG NGANG)
       if (statsTbody) {
         const stats = this.generateTeacherBorrowStats(records);
-        statsTbody.innerHTML = stats.map((s, i) => `
+        let totalKhtn = 0;
+        let totalCn = 0;
+        let totalAll = 0;
+        let totalReturned = 0;
+        let totalBorrowing = 0;
+
+        stats.forEach(s => {
+          totalKhtn += s.khtnCount;
+          totalCn += s.cnCount;
+          totalAll += s.totalCount;
+          totalReturned += s.returnedCount;
+          totalBorrowing += s.borrowingCount;
+        });
+
+        const rowsHtml = stats.map((s, i) => `
           <tr style="border-bottom: 1px solid black; text-align: center; font-family: 'Times New Roman', Times, serif;">
             <td style="padding: 5px; border: 1px solid black; font-weight: bold;">${i + 1}</td>
             <td style="padding: 5px; border: 1px solid black; text-align: left; font-weight: bold;">${s.teacherName}</td>
@@ -5754,6 +5994,19 @@
             <td style="padding: 5px; border: 1px solid black; color: #b45309; font-weight: bold;">${s.borrowingCount}</td>
           </tr>
         `).join('');
+
+        const totalRowHtml = `
+          <tr style="border-top: 2px solid black; border-bottom: 2px solid black; text-align: center; font-family: 'Times New Roman', Times, serif; font-weight: bold; background-color: #e5e7eb;">
+            <td colspan="3" style="padding: 6px; border: 1px solid black; text-align: center; font-weight: bold; text-transform: uppercase;">TỔNG CỘNG TOÀN TỔ</td>
+            <td style="padding: 6px; border: 1px solid black; font-weight: bold;">${totalKhtn}</td>
+            <td style="padding: 6px; border: 1px solid black; font-weight: bold;">${totalCn}</td>
+            <td style="padding: 6px; border: 1px solid black; font-weight: bold; background-color: #d1d5db;">${totalAll}</td>
+            <td style="padding: 6px; border: 1px solid black; color: #047857; font-weight: bold;">${totalReturned}</td>
+            <td style="padding: 6px; border: 1px solid black; color: #b45309; font-weight: bold;">${totalBorrowing}</td>
+          </tr>
+        `;
+
+        statsTbody.innerHTML = rowsHtml + totalRowHtml;
       }
     }
 
@@ -5796,11 +6049,15 @@
       }
 
       const rowsDetailHtml = records.length === 0 
-        ? `<tr><td colspan="10" align="center" style="padding: 10pt; font-style: italic;">Chưa có dữ liệu mượn thiết bị trong kỳ báo cáo</td></tr>`
-        : records.map((r, i) => `
+        ? `<tr><td colspan="11" align="center" style="padding: 10pt; font-style: italic;">Chưa có dữ liệu mượn thiết bị trong kỳ báo cáo</td></tr>`
+        : records.map((r, i) => {
+            const dateReturnFmt = this.formatDateVN(r.returnDate);
+            const staffConfirmDisp = r.staffConfirm || this.getStaffConfirmByTeacher(r.teacherName);
+            return `
             <tr>
               <td align="center"><b>${i + 1}</b></td>
               <td align="center">${r.date || ''}</td>
+              <td align="center" style="color: #047857; font-weight: bold;">${dateReturnFmt || '-'}</td>
               <td align="center">${r.session || 'Sáng'} (${r.period || ''})</td>
               <td align="center"><b>${r.className || ''}</b></td>
               <td>${r.lessonTitle || ''}</td>
@@ -5808,9 +6065,24 @@
               <td align="center"><b>${r.quantity || 1}</b></td>
               <td>${r.teacherName || ''}</td>
               <td align="center">${r.status || 'Đang mượn'}</td>
-              <td align="center">${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</td>
+              <td align="center">${staffConfirmDisp}</td>
             </tr>
-          `).join('');
+          `;
+          }).join('');
+
+      let totalKhtn = 0;
+      let totalCn = 0;
+      let totalAll = 0;
+      let totalReturned = 0;
+      let totalBorrowing = 0;
+
+      stats.forEach(s => {
+        totalKhtn += s.khtnCount;
+        totalCn += s.cnCount;
+        totalAll += s.totalCount;
+        totalReturned += s.returnedCount;
+        totalBorrowing += s.borrowingCount;
+      });
 
       const rowsStatsHtml = stats.map((s, i) => `
         <tr>
@@ -5820,10 +6092,19 @@
           <td align="center">${s.khtnCount}</td>
           <td align="center">${s.cnCount}</td>
           <td align="center" style="background-color:#e5e7eb;"><b>${s.totalCount}</b></td>
-          <td align="center">${s.returnedCount}</td>
-          <td align="center">${s.borrowingCount}</td>
+          <td align="center" style="color:#047857;"><b>${s.returnedCount}</b></td>
+          <td align="center" style="color:#b45309;"><b>${s.borrowingCount}</b></td>
         </tr>
-      `).join('');
+      `).join('') + `
+        <tr style="background-color:#e5e7eb; font-weight:bold;">
+          <td colspan="3" align="center"><b>TỔNG CỘNG TOÀN TỔ</b></td>
+          <td align="center"><b>${totalKhtn}</b></td>
+          <td align="center"><b>${totalCn}</b></td>
+          <td align="center" style="background-color:#d1d5db;"><b>${totalAll}</b></td>
+          <td align="center" style="color:#047857;"><b>${totalReturned}</b></td>
+          <td align="center" style="color:#b45309;"><b>${totalBorrowing}</b></td>
+        </tr>
+      `;
 
       const wordHtml = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -5927,9 +6208,10 @@
             <table>
               <thead>
                 <tr>
-                  <th width="5%">STT</th>
-                  <th width="10%">Ngày mượn</th>
-                  <th width="11%">Buổi / Tiết</th>
+                  <th width="4%">STT</th>
+                  <th width="9%">Ngày mượn</th>
+                  <th width="9%">Ngày trả</th>
+                  <th width="10%">Buổi / Tiết</th>
                   <th width="6%">Lớp</th>
                   <th width="22%">Tên bài dạy / Chủ đề bài học</th>
                   <th width="22%">Tên thiết bị dạy học</th>
@@ -6198,21 +6480,24 @@
         ["SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC - TỔ KHTN & CÔNG NGHỆ"],
         ["Năm học: 2026 - 2027 (Trích xuất từ Hệ thống Quản lý Kế hoạch bài dạy)"],
         [""],
-        ["STT", "Ngày mượn", "Buổi/Tiết", "Lớp", "Tên bài dạy / Chủ đề", "Tên thiết bị dạy học", "Số lượng", "Giáo viên mượn", "Tình trạng", "Người xác nhận"]
+        ["STT", "Ngày mượn", "Ngày trả", "Buổi/Tiết", "Lớp", "Tên bài dạy / Chủ đề", "Tên thiết bị dạy học", "Số lượng", "Giáo viên mượn", "Tình trạng", "Người xác nhận"]
       ];
 
       records.forEach((r, i) => {
+        const dateReturnFmt = this.formatDateVN(r.returnDate);
+        const staffConfirmDisp = r.staffConfirm || this.getStaffConfirmByTeacher(r.teacherName);
         rows.push([
           i + 1,
           r.date || '',
+          dateReturnFmt || '-',
           `${r.session || 'Sáng'} (${r.period || ''})`,
           r.className || '',
           r.lessonTitle || '',
           r.equipmentName || '',
           r.quantity || 1,
           r.teacherName || '',
-          r.status || '',
-          r.staffConfirm || 'Nguyễn Sỹ Tuấn'
+          r.status || 'Đang mượn',
+          staffConfirmDisp
         ]);
       });
 

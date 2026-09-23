@@ -907,14 +907,56 @@
           </div>
         </div>
 
+        
+        <!-- BẢNG THỐNG KÊ SỐ LƯỢT MƯỢN THIẾT BỊ THEO TỪNG GIÁO VIÊN TRỰC TIẾP TRÊN WEB -->
+        <div class="m-4 md:m-5 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>📊 BẢNG THỐNG KÊ SỐ LƯỢT MƯỢN THIẾT BỊ THEO TỪNG GIÁO VIÊN</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 font-semibold">Tự động tổng hợp</span>
+              </h4>
+              <p class="text-[11px] text-slate-500 mt-0.5">Số lượt mượn mỗi bài = số lớp dạy của bài đó (Ví dụ: bài dạy các lớp 9A1, 9A2, 9A3, 9A4 tính là 4 lượt)</p>
+            </div>
+            <button onclick="window.EquipmentSyncEngine.printEquipmentReport()" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 shrink-0">
+              <span>🖨️ Xuất Bản In & Word (.doc)</span>
+            </button>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                  <th class="px-3 py-2 text-center w-10">STT</th>
+                  <th class="px-3 py-2">Họ và tên Giáo viên</th>
+                  <th class="px-3 py-2 w-32">Môn phụ trách</th>
+                  <th class="px-3 py-2 text-center w-24 bg-teal-50/70 text-teal-900">Lượt KHTN</th>
+                  <th class="px-3 py-2 text-center w-28 bg-indigo-50/70 text-indigo-900">Lượt Công nghệ</th>
+                  <th class="px-3 py-2 text-center w-28 bg-slate-100 text-slate-900">Tổng lượt mượn</th>
+                  <th class="px-3 py-2 text-center w-20 text-emerald-700">Đã trả</th>
+                  <th class="px-3 py-2 text-center w-20 text-amber-700">Đang mượn</th>
+                </tr>
+              </thead>
+              <tbody id="eq-inline-stats-tbody" class="divide-y divide-slate-100 font-medium">
+                <!-- Rendered by window.EquipmentSyncEngine.renderInlineTeacherStats() -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="px-4 md:px-5 pb-2 pt-1 flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <span>📖 NHẬT KÝ CHI TIẾT MƯỢN - TRẢ THIẾT BỊ DẠY HỌC</span>
+          </h4>
+        </div>
+
         <!-- Table -->
         <div id="eq-tracking-table-container" class="overflow-x-auto max-h-[620px] overflow-y-auto">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
                 <th class="px-3 py-3 text-center w-10">STT</th>
-                <th class="px-3 py-3 w-28">Ngày / Buổi / Tiết</th>
-                <th class="px-3 py-3 w-20">Lớp dạy</th>
+                <th class="px-3 py-3 w-32">Ngày mượn & Trả</th>
+                <th class="px-3 py-3 w-28">Lớp dạy (Lượt)</th>
                 <th class="px-3 py-3">Bài dạy & Môn học</th>
                 <th class="px-3 py-3">Thiết bị mượn</th>
                 <th class="px-3 py-3 text-center w-14">SL</th>
@@ -1795,11 +1837,12 @@
   </div>
 
   <!-- ================= MODAL BÁO TRẢ THIẾT BỊ ================= -->
+  <!-- ================= MODAL BÁO TRẢ / ĐIỀU CHỈNH THIẾT BỊ ================= -->
   <div id="modal-return-equipment" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="modal-panel glass-panel w-full max-w-md rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col">
+    <div class="modal-panel glass-panel w-full max-w-lg rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col">
       <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50 to-indigo-50">
-        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-          <span>↩️ Báo Trả Thiết Bị Dạy Học</span>
+        <h3 id="modal-return-equipment-title" class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span>↩️ Trả Thiết Bị Dạy Học / Điều Chỉnh Ngày Trả</span>
         </h3>
         <button onclick="window.EquipmentSyncEngine.closeReturnModal()" class="w-7 h-7 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold shadow-sm transition">
           ✕
@@ -1808,13 +1851,45 @@
       <form onsubmit="window.EquipmentSyncEngine.handleReturnSubmit(event)" class="p-5 space-y-3.5 text-xs">
         <input type="hidden" id="return-record-id">
         <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl">
-          <div class="text-[11px] text-teal-700 font-semibold">Thiết bị hoàn trả:</div>
+          <div class="text-[11px] text-teal-700 font-semibold">Phiếu mượn thiết bị:</div>
           <div id="return-equipment-info" class="font-bold text-teal-950 mt-0.5">...</div>
         </div>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Ngày hoàn trả <span class="text-rose-500">*</span></label>
-          <input type="date" id="return-date-input" required class="w-full px-3 py-2 font-mono bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Ngày hoàn trả</label>
+            <input type="date" id="return-date-input" class="w-full px-3 py-2 font-mono bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Trạng thái phiếu</label>
+            <select id="return-status-select" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+              <option value="Đã trả">✓ Đã trả thiết bị</option>
+              <option value="Đang mượn">⏳ Đang mượn (Chưa trả)</option>
+            </select>
+          </div>
         </div>
+
+        <!-- Khu vực dành cho Admin điều chỉnh lớp dạy & người xác nhận -->
+        <div id="return-admin-fields" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+          <div class="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+            <span>⚙️ Quyền Quản trị viên (Admin / Tổ trưởng):</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Lớp dạy (Mỗi lớp = 1 lượt mượn):</label>
+              <input type="text" id="return-class-input" placeholder="VD: 9A1, 9A2, 9A3, 9A4" class="w-full px-2.5 py-1.5 font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+              <div class="text-[9px] text-slate-400 mt-0.5">VD: 9A1, 9A2, 9A3, 9A4 tính là 4 lượt</div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Người xác nhận:</label>
+              <select id="return-staff-select" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                <option value="Nguyễn Sỹ Tuấn">Nguyễn Sỹ Tuấn</option>
+                <option value="Diệp Văn Long">Diệp Văn Long</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tình trạng khi trả <span class="text-rose-500">*</span></label>
           <select id="return-condition-select" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
@@ -1830,7 +1905,7 @@
         </div>
         <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
           <button type="button" onclick="window.EquipmentSyncEngine.closeReturnModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">Hủy</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition shadow-md">Xác nhận Báo trả</button>
+          <button type="submit" id="modal-return-submit-btn" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition shadow-md">Xác nhận Lưu</button>
         </div>
       </form>
     </div>
@@ -2032,6 +2107,7 @@
               <tr class="bg-gray-100 border-b border-black text-center font-bold" style="background-color: #f3f4f6;">
                 <th class="p-1.5 border border-black w-8">STT</th>
                 <th class="p-1.5 border border-black w-24">Ngày mượn</th>
+                <th class="p-1.5 border border-black w-24">Ngày trả</th>
                 <th class="p-1.5 border border-black w-24">Buổi / Tiết</th>
                 <th class="p-1.5 border border-black w-14">Lớp</th>
                 <th class="p-1.5 border border-black">Tên bài dạy / Chủ đề bài học</th>
@@ -2249,7 +2325,7 @@
   <script src="js/drive-api.js"></script>
   <script src="js/signature.js"></script>
   <script src="js/ai-evaluator.js"></script>
-  <script src="js/equipment-sync.js?v=20260923_v7"></script>
+  <script src="js/equipment-sync.js?v=20260923_v10_release"></script>
   <script src="js/ui-teacher.js"></script>
   <script src="js/ui-reviewer.js"></script>
   <script src="js/ui-admin.js"></script>
