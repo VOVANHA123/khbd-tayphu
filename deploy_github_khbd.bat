@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 title Trien khai Du an Ke Hoach Bai Day len GitHub
 cls
 
@@ -19,7 +20,7 @@ cd /d "%~dp0KE HOACH BAI DAY"
 REM Kiem tra xem da khoi tao git chua
 if not exist ".git" (
     echo [*] Dang khoi tao Git repository cho du an KHBD...
-    git init
+    git init -b main
     echo.
 )
 
@@ -40,11 +41,14 @@ echo.
 goto :bat_dau_day
 
 :nhap_repo
-echo [BUOC 1] Thầy/Cô chua lien ket voi Repository GitHub nao.
+echo [BUOC 1] Thay/Co chua lien ket voi Repository GitHub nao.
 echo.
-echo Vui long dan link Repository GitHub cua Thầy/Cô vao day
+echo Vui long dan link Repository GitHub cua Thay/Co vao day:
 echo (Vi du: https://github.com/vovanha/khbd-thcs-tayphu.git)
-echo Lưu ý: Nên chọn chế độ Private (Riêng tư) khi tạo Repository trên GitHub.
+echo.
+echo Luu y quan trong:
+echo   - Nen chon che do 'Private' (Rieng tu) khi tao Repository tren GitHub.
+echo   - KHONG tich chon vao o 'Add a README file'.
 echo.
 set /p REPO_URL=">> Duong dan GitHub: "
 
@@ -67,7 +71,7 @@ echo Da luu phien ban ma nguon an toan.
 echo.
 
 echo [BUOC 4] Dang tai ma nguon len nhanh 'main' tren GitHub...
-echo (Luu y: Neu trinh duyet yeu cau dang nhap, Thay/Co hay bam Authorize/Sign in)...
+echo (Luu y: Neu trinh duyet mo ra hoi dang nhap, Thay/Co hay bam Authorize/Sign in)...
 echo.
 
 git branch -M main
@@ -111,7 +115,7 @@ goto :ket_thuc
 
 :chua_nhap_link
 echo.
-echo [THONG BAO] Thầy/Cô chua nhap duong dan. Vui long chay lai file sau.
+echo [THONG BAO] Thay/Co chua nhap duong dan. Vui long chay lai file sau.
 goto :ket_thuc
 
 :no_git
