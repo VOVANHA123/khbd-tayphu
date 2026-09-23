@@ -820,6 +820,11 @@
             <div class="text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
               <span>Hiển thị: </span><span id="eq-catalog-count" class="font-bold text-teal-700">318</span> / 318
             </div>
+
+            <!-- Nút Thêm Thiết Bị Mới (Admin) -->
+            <button id="btn-admin-add-equipment" onclick="window.EquipmentSyncEngine.openAddEquipmentModal()" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1 cursor-pointer whitespace-nowrap" title="Thêm thiết bị mới vào kho dữ liệu">
+              <span>➕ Thêm Thiết Bị</span>
+            </button>
           </div>
         </div>
 
@@ -1910,87 +1915,249 @@
 
   <!-- ================= MODAL IN SỔ SƯ PHẠM A4 CHO TỔ KHTN - CN ================= -->
   <div id="modal-print-equipment-report" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/75 backdrop-blur-sm overflow-y-auto">
-    <div class="modal-panel bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col my-auto max-h-[95vh]">
-      <div class="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:hidden">
+    <div class="modal-panel bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col my-auto max-h-[96vh]">
+      <!-- Thanh công cụ phía trên (Ẩn khi in) -->
+      <div class="p-3 sm:p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50 print:hidden">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">Xem Trước Sổ Sư Phạm Theo Dõi Thiết Bị (A4 Ngang)</h3>
-          <p class="text-[11px] text-slate-500">Tổ Khoa học tự nhiên – Công nghệ • Trường THCS Tây Phú</p>
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5 font-sans">
+            <span>📖 Sổ Sư Phạm Theo Dõi Thiết Bị Dạy Học</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">Khổ A4 Ngang</span>
+          </h3>
+          <p class="text-[11px] text-slate-500 font-sans">UBND Xã Tây Phú • Trường THCS Tây Phú • Tổ KHTN – Công nghệ</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button onclick="window.EquipmentSyncEngine.triggerBrowserPrint()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1.5">
+        
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Bộ lọc Tháng / Học kỳ / Năm học -->
+          <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 shadow-xs">
+            <span class="text-[11px] font-bold text-slate-700 font-sans">Kỳ báo cáo:</span>
+            <select id="print-filter-period" onchange="window.EquipmentSyncEngine.onPrintPeriodChange(this.value)" class="text-xs font-semibold bg-transparent outline-none cursor-pointer text-blue-900 font-sans">
+              <option value="ALL">-- Cả Năm học 2026 - 2027 --</option>
+              <optgroup label="Theo Học Kỳ">
+                <option value="HK1">Học Kỳ I (Tháng 9/2026 → Tháng 1/2027)</option>
+                <option value="HK2">Học Kỳ II (Tháng 2/2027 → Tháng 5/2027)</option>
+              </optgroup>
+              <optgroup label="Theo Tháng">
+                <option value="T9">Tháng 9 / 2026</option>
+                <option value="T10">Tháng 10 / 2026</option>
+                <option value="T11">Tháng 11 / 2026</option>
+                <option value="T12">Tháng 12 / 2026</option>
+                <option value="T1">Tháng 1 / 2027</option>
+                <option value="T2">Tháng 2 / 2027</option>
+                <option value="T3">Tháng 3 / 2027</option>
+                <option value="T4">Tháng 4 / 2027</option>
+                <option value="T5">Tháng 5 / 2027</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Nút Xuất Word .doc -->
+          <button type="button" onclick="window.EquipmentSyncEngine.exportEquipmentWord()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer font-sans" title="Xuất file Microsoft Word chuẩn font Times New Roman, khổ giấy ngang A4">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <span>Xuất file Word (.doc)</span>
+          </button>
+
+          <!-- Nút In PDF A4 Ngang -->
+          <button type="button" onclick="window.EquipmentSyncEngine.triggerBrowserPrint()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer font-sans" title="Mở hộp thoại In hoặc Lưu file PDF khổ giấy A4 ngang">
             <span>🖨️ In ra giấy / Lưu PDF</span>
           </button>
-          <button onclick="window.EquipmentSyncEngine.closePrintModal()" class="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-700 text-xs font-bold transition">
+
+          <!-- Nút Đóng Modal -->
+          <button type="button" onclick="window.EquipmentSyncEngine.closePrintModal()" class="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-700 text-xs font-bold transition">
             ✕
           </button>
         </div>
       </div>
 
-      <div class="p-6 overflow-y-auto flex-1 font-serif text-black print:p-0">
-        <!-- Header Sư Phạm Chuẩn -->
-        <div class="flex justify-between items-start text-center text-xs mb-4">
-          <div class="w-1/2">
-            <p class="uppercase font-normal">PHÒNG GD&ĐT THOẠI SƠN</p>
-            <p class="font-bold uppercase tracking-wider">TRƯỜNG THCS TÂY PHÚ</p>
-            <p class="font-bold text-[11px] mt-0.5 text-teal-800">TỔ KHOA HỌC TỰ NHIÊN - CÔNG NGHỆ</p>
-            <div class="w-24 h-0.5 bg-black mx-auto mt-1"></div>
-          </div>
-          <div class="w-1/2">
-            <p class="font-bold uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-            <p class="font-bold underline underline-offset-4">Độc lập - Tự do - Hạnh phúc</p>
-            <p class="text-[11px] italic mt-1.5">Tây Phú, ngày ... tháng ... năm 2026</p>
-          </div>
-        </div>
+      <!-- Nội dung văn bản sư phạm chuẩn Nghị định 30/2020/NĐ-CP (Font Times New Roman cố định, khổ A4 ngang) -->
+      <div id="print-document-content" class="p-6 sm:p-8 overflow-y-auto flex-1 text-black print:p-0" style="font-family: 'Times New Roman', Times, serif !important; letter-spacing: normal !important; line-height: 1.4;">
+        <!-- Header Cơ quan & Quốc hiệu Tiêu ngữ chuẩn -->
+        <table class="w-full border-0 mb-4" style="border-collapse: collapse; font-family: 'Times New Roman', Times, serif;">
+          <tr>
+            <td class="w-1/2 text-center align-top p-0" style="font-family: 'Times New Roman', Times, serif;">
+              <div style="font-size: 13pt; text-transform: uppercase; font-weight: normal; margin: 0; line-height: 1.3;">UBND XÃ TÂY PHÚ</div>
+              <div style="font-size: 13pt; text-transform: uppercase; font-weight: bold; margin: 0; line-height: 1.3;">TRƯỜNG THCS TÂY PHÚ</div>
+              <div style="font-size: 12pt; text-transform: uppercase; font-weight: bold; color: #111; margin-top: 2px; line-height: 1.3;">TỔ KHOA HỌC TỰ NHIÊN - CÔNG NGHỆ</div>
+              <div style="width: 120px; height: 1px; background-color: #000; margin: 4px auto 0 auto;"></div>
+            </td>
+            <td class="w-1/2 text-center align-top p-0" style="font-family: 'Times New Roman', Times, serif;">
+              <div style="font-size: 13pt; text-transform: uppercase; font-weight: bold; margin: 0; line-height: 1.3;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+              <div style="font-size: 14pt; font-weight: bold; text-decoration: underline; text-underline-offset: 3px; margin: 0; line-height: 1.3;">Độc lập - Tự do - Hạnh phúc</div>
+              <div id="print-header-date" style="font-size: 12pt; font-style: italic; color: #333; margin-top: 4px; line-height: 1.3;">Tây Phú, ngày ... tháng ... năm 2026</div>
+            </td>
+          </tr>
+        </table>
 
-        <div class="text-center my-4">
-          <h2 class="text-base sm:text-lg font-bold uppercase tracking-wide">
+        <!-- Tiêu Đề Văn Bản Chính -->
+        <div class="text-center my-5" style="font-family: 'Times New Roman', Times, serif;">
+          <h2 id="print-report-main-title" style="font-size: 16pt; font-weight: bold; text-transform: uppercase; margin: 0; letter-spacing: 0;">
             SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC
           </h2>
-          <p class="text-xs italic mt-0.5">Tổ Khoa học tự nhiên – Công nghệ • Năm học 2026 - 2027</p>
+          <p id="print-report-sub-title" style="font-size: 13pt; font-style: italic; margin-top: 4px; color: #222;">
+            Tổ Khoa học tự nhiên – Công nghệ • Năm học 2026 - 2027
+          </p>
         </div>
 
-        <!-- Bảng Dữ Liệu Sư Phạm -->
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse border border-black text-[11px]">
+        <!-- PHẦN I: BẢNG THEO DÕI CHI TIẾT MƯỢN - TRẢ -->
+        <div class="mb-2" style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; text-transform: uppercase;">
+          I. NHẬT KÝ CHI TIẾT MƯỢN - TRẢ THIẾT BỊ DẠY HỌC
+        </div>
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full border-collapse border border-black" style="font-size: 10.5pt; font-family: 'Times New Roman', Times, serif;">
             <thead>
-              <tr class="bg-gray-100 border-b border-black text-center font-bold">
-                <th class="p-1.5 border-r border-black w-8">STT</th>
-                <th class="p-1.5 border-r border-black w-20">Ngày mượn</th>
-                <th class="p-1.5 border-r border-black w-24">Buổi / Tiết</th>
-                <th class="p-1.5 border-r border-black w-14">Lớp</th>
-                <th class="p-1.5 border-r border-black">Tên bài dạy / Chủ đề bài học</th>
-                <th class="p-1.5 border-r border-black">Tên thiết bị dạy học</th>
-                <th class="p-1.5 border-r border-black w-10">SL</th>
-                <th class="p-1.5 border-r border-black w-28">Giáo viên mượn</th>
-                <th class="p-1.5 border-r border-black w-20">Tình trạng</th>
-                <th class="p-1.5 w-24">Người xác nhận</th>
+              <tr class="bg-gray-100 border-b border-black text-center font-bold" style="background-color: #f3f4f6;">
+                <th class="p-1.5 border border-black w-8">STT</th>
+                <th class="p-1.5 border border-black w-24">Ngày mượn</th>
+                <th class="p-1.5 border border-black w-24">Buổi / Tiết</th>
+                <th class="p-1.5 border border-black w-14">Lớp</th>
+                <th class="p-1.5 border border-black">Tên bài dạy / Chủ đề bài học</th>
+                <th class="p-1.5 border border-black">Tên thiết bị dạy học</th>
+                <th class="p-1.5 border border-black w-10">SL</th>
+                <th class="p-1.5 border border-black w-28">Giáo viên mượn</th>
+                <th class="p-1.5 border border-black w-20">Tình trạng</th>
+                <th class="p-1.5 border border-black w-24">Người xác nhận</th>
               </tr>
             </thead>
-            <tbody id="report-print-tbody" class="divide-y divide-black">
+            <tbody id="report-print-tbody">
               <!-- Rendered by window.EquipmentSyncEngine -->
             </tbody>
           </table>
         </div>
 
-        <!-- Phần Ký Duyệt 3 Bên Theo Đúng Văn Bản -->
-        <div class="mt-8 flex justify-between items-start text-center text-xs">
-          <div class="w-1/3">
-            <p class="font-bold uppercase">HIỆU TRƯỞNG</p>
-            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và đóng dấu)</p>
-            <p class="font-bold text-xs uppercase">HỒ MINH TRIỀU</p>
+        <!-- PHẦN II: BẢNG THỐNG KÊ TỔNG SỐ LƯỢT MƯỢN THEO GIÁO VIÊN -->
+        <div class="mt-6 mb-2" style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: bold; text-transform: uppercase;">
+          II. BẢNG THỐNG KÊ SỐ LƯỢT MƯỢN THIẾT BỊ THEO TỪNG GIÁO VIÊN
+        </div>
+        <div class="overflow-x-auto mb-8">
+          <table class="w-full border-collapse border border-black" style="font-size: 11pt; font-family: 'Times New Roman', Times, serif;">
+            <thead>
+              <tr class="bg-gray-100 border-b border-black text-center font-bold" style="background-color: #f3f4f6;">
+                <th class="p-2 border border-black w-10">STT</th>
+                <th class="p-2 border border-black text-left">Họ và tên Giáo viên</th>
+                <th class="p-2 border border-black w-36 text-left">Môn phụ trách</th>
+                <th class="p-2 border border-black w-24">Lượt KHTN</th>
+                <th class="p-2 border border-black w-24">Lượt Công nghệ</th>
+                <th class="p-2 border border-black w-28 font-bold" style="background-color: #e5e7eb;">Tổng lượt mượn</th>
+                <th class="p-2 border border-black w-20 text-center">Đã trả</th>
+                <th class="p-2 border border-black w-20 text-center">Đang mượn</th>
+              </tr>
+            </thead>
+            <tbody id="report-stats-tbody">
+              <!-- Rendered by window.EquipmentSyncEngine -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PHẦN III: CHỮ KÝ 3 BÊN CHUẨN THỂ THỨC VĂN BẢN QUẢN LÝ -->
+        <table class="w-full border-0 mt-8" style="border-collapse: collapse; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid;">
+          <tr>
+            <td class="w-1/3 text-center align-top p-2" style="font-family: 'Times New Roman', Times, serif;">
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0;">HIỆU TRƯỞNG</div>
+              <div style="font-size: 10pt; font-style: italic; color: #555; margin-bottom: 55px;">(Ký và đóng dấu)</div>
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">HỒ MINH TRIỀU</div>
+            </td>
+            <td class="w-1/3 text-center align-top p-2" style="font-family: 'Times New Roman', Times, serif;">
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0;">TỔ TRƯỞNG KHTN - CN</div>
+              <div style="font-size: 10pt; font-style: italic; color: #555; margin-bottom: 55px;">(Ký và ghi rõ họ tên)</div>
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">VÕ VĂN HÀ</div>
+            </td>
+            <td class="w-1/3 text-center align-top p-2" style="font-family: 'Times New Roman', Times, serif;">
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0;">CÁN BỘ THIẾT BỊ</div>
+              <div style="font-size: 10pt; font-style: italic; color: #555; margin-bottom: 55px;">(Ký và ghi rõ họ tên)</div>
+              <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">NGUYỄN SỸ TUẤN</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL QUẢN TRỊ THIẾT BỊ CHO ADMIN (THÊM / SỬA THIẾT BỊ) ================= -->
+  <div id="modal-manage-equipment" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+    <div class="modal-panel glass-panel w-full max-w-xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col my-auto max-h-[95vh]">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50 to-emerald-50 shrink-0">
+        <h3 id="modal-manage-equipment-title" class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span>⚙️ Quản Lý Thiết Bị Dạy Học</span>
+        </h3>
+        <button type="button" onclick="window.EquipmentSyncEngine.closeManageEquipmentModal()" class="w-7 h-7 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold shadow-sm transition">
+          ✕
+        </button>
+      </div>
+      <form onsubmit="window.EquipmentSyncEngine.handleSaveEquipmentSubmit(event)" class="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto">
+        <input type="hidden" id="manage-eq-is-edit" value="false">
+        <input type="hidden" id="manage-eq-original-code" value="">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mã thiết bị <span class="text-rose-500">*</span></label>
+            <input type="text" id="manage-eq-code" required placeholder="TB-KHTN-K6-001" class="w-full px-2.5 py-1.5 font-mono font-bold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
           </div>
-          <div class="w-1/3">
-            <p class="font-bold uppercase">TỔ TRƯỞNG KHTN - CN</p>
-            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và ghi rõ họ tên)</p>
-            <p class="font-bold text-xs uppercase">VÕ VĂN HÀ</p>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Môn học <span class="text-rose-500">*</span></label>
+            <select id="manage-eq-subject" required class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+              <option value="Khoa học tự nhiên">Khoa học tự nhiên</option>
+              <option value="Công nghệ">Công nghệ</option>
+              <option value="Dùng chung">Dùng chung</option>
+            </select>
           </div>
-          <div class="w-1/3">
-            <p class="font-bold uppercase">CÁN BỘ THIẾT BỊ</p>
-            <p class="italic text-[10px] text-gray-500 mb-14">(Ký và ghi rõ họ tên)</p>
-            <p class="font-bold text-xs uppercase">NGUYỄN SỸ TUẤN</p>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Khối lớp <span class="text-rose-500">*</span></label>
+            <select id="manage-eq-grade" required class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium">
+              <option value="Khối 6">Khối 6</option>
+              <option value="Khối 7">Khối 7</option>
+              <option value="Khối 8">Khối 8</option>
+              <option value="Khối 9">Khối 9</option>
+              <option value="Toàn trường">Toàn trường (Dùng chung)</option>
+            </select>
           </div>
         </div>
-      </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tên thiết bị & Dụng cụ thí nghiệm <span class="text-rose-500">*</span></label>
+          <textarea id="manage-eq-name" required rows="2" placeholder="Nhập tên thiết bị hoặc mô tả danh mục dụng cụ..." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 font-medium text-xs"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Bài dạy theo PPCT</label>
+            <input type="text" id="manage-eq-lesson" placeholder="Bài 1. Giới thiệu về KHTN..." class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Tuần dạy</label>
+            <input type="text" id="manage-eq-week" placeholder="Tuần 1 (Tiết 1, 2)..." class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Tổng số lượng <span class="text-rose-500">*</span></label>
+            <input type="number" id="manage-eq-total" value="10" min="1" max="500" required class="w-full px-2.5 py-1.5 text-center font-mono font-bold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Số lượng sẵn sàng <span class="text-rose-500">*</span></label>
+            <input type="number" id="manage-eq-available" value="10" min="0" max="500" required class="w-full px-2.5 py-1.5 text-center font-mono font-bold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Đơn vị tính</label>
+            <input type="text" id="manage-eq-unit" value="Bộ" placeholder="Bộ, Cái, Hộp..." class="w-full px-2.5 py-1.5 text-center bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Phòng lưu trữ</label>
+            <input type="text" id="manage-eq-room" value="Phòng bộ môn" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1">Tình trạng thiết bị</label>
+          <input type="text" id="manage-eq-status" value="Sẵn sàng sử dụng" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="window.EquipmentSyncEngine.closeManageEquipmentModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">Hủy</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition shadow-md flex items-center gap-1.5">
+            <span>💾 Lưu Thiết Bị</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -2021,7 +2188,7 @@
   <script src="js/drive-api.js"></script>
   <script src="js/signature.js"></script>
   <script src="js/ai-evaluator.js"></script>
-  <script src="js/equipment-sync.js?v=20260923_v5"></script>
+  <script src="js/equipment-sync.js?v=20260923_v6"></script>
   <script src="js/ui-teacher.js"></script>
   <script src="js/ui-reviewer.js"></script>
   <script src="js/ui-admin.js"></script>

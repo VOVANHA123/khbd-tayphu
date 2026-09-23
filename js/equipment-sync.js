@@ -5128,9 +5128,19 @@
               </span>
             </td>
             <td class="px-3 py-3 text-right whitespace-nowrap">
-              <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal('${eq.code}')" ${!isAvailable ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] shadow-sm transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1" title="Đăng ký mượn thiết bị này">
-                <span>+ Mượn</span>
-              </button>
+              <div class="inline-flex items-center gap-1.5 justify-end">
+                <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal('${eq.code}')" ${!isAvailable ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] shadow-sm transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1" title="Đăng ký mượn thiết bị này">
+                  <span>+ Mượn</span>
+                </button>
+                ${this.isAdminOrLeader() ? `
+                  <button onclick="window.EquipmentSyncEngine.openEditEquipmentModal('${eq.code}')" class="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition shadow-xs" title="Chỉnh sửa thiết bị (Admin)">
+                    <span>✏️</span>
+                  </button>
+                  <button onclick="window.EquipmentSyncEngine.deleteEquipment('${eq.code}')" class="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition border border-rose-200 shadow-xs" title="Xóa thiết bị khỏi kho (Admin)">
+                    <span>🗑️</span>
+                  </button>
+                ` : ''}
+              </div>
             </td>
           </tr>
         `;
@@ -5202,7 +5212,7 @@
         return;
       }
 
-      const isManager = user && (user.role === 'ADMIN' || user.role === 'TO_TRUONG' || user.username === 'vovanha');
+      const isManager = this.isAdminOrLeader();
 
       tbody.innerHTML = records.map((r, index) => {
         const isBorrowed = r.status === 'Đang mượn';
@@ -5228,13 +5238,21 @@
           }
           if (isManager) {
             actionHtml += `
-              <button onclick="window.EquipmentSyncEngine.confirmReturn('${r.id}', '${user.name}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-sm flex items-center gap-1">
+              <button onclick="window.EquipmentSyncEngine.confirmReturn('${r.id}', '${user ? user.name : 'Võ Văn Hà'}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-sm flex items-center gap-1">
                 <span>✓ Nhận đồ</span>
               </button>
             `;
           }
         } else {
           actionHtml = `<span class="text-[11px] text-slate-400">CB: ${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</span>`;
+        }
+
+        if (isManager) {
+          actionHtml += `
+            <button onclick="window.EquipmentSyncEngine.deleteBorrowRecord('${r.id}')" class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold transition border border-rose-200 shadow-xs ml-1" title="Xóa phiếu mượn này (Chỉ dành cho Admin / Tổ trưởng)">
+              <span>🗑️</span>
+            </button>
+          `;
         }
 
         const planLinkBadge = r.planId 
@@ -5495,34 +5513,206 @@
       }
     }
 
-    // In Sổ Sư Phạm A4 Tổ KHTN - CN
-    printEquipmentReport() {
-      const modal = document.getElementById('modal-print-equipment-report');
-      if (!modal) return;
+    // Kiểm tra quyền Quản trị viên (Admin) hoặc Tổ trưởng chuyên môn
+    isAdminOrLeader() {
+      const user = window.AppStorage ? window.AppStorage.getCurrentUser() : null;
+      if (!user) return true;
+      const r = (user.role || '').toUpperCase();
+      const u = (user.username || '').toLowerCase();
+      return r.includes('ADMIN') || r.includes('TO_TRUONG') || r.includes('TRUONG') || u === 'vovanha' || u === 'admin';
+    }
 
-      const records = this.getFilteredRecords();
+    // Lọc bản ghi mượn trả theo thời gian (Tháng, Học kỳ, Cả năm)
+    getRecordsByPeriod(period = 'ALL') {
+      const records = this.borrowRecords || [];
+      if (period === 'ALL') return records;
+
+      return records.filter(r => {
+        const d = r.date || '';
+        if (!d) return false;
+        const parts = d.split('-'); // YYYY-MM-DD
+        const month = parseInt(parts[1], 10);
+
+        if (period === 'HK1') {
+          // Tháng 9 -> 12 hoặc Tháng 1
+          return month >= 9 || month === 1;
+        }
+        if (period === 'HK2') {
+          // Tháng 2 -> Tháng 5
+          return month >= 2 && month <= 5;
+        }
+        if (period.startsWith('T')) {
+          const targetMonth = parseInt(period.substring(1), 10);
+          return month === targetMonth;
+        }
+        return true;
+      });
+    }
+
+    // Thống kê tổng số lượt mượn theo từng giáo viên trong kỳ
+    generateTeacherBorrowStats(records) {
+      const statsMap = new Map();
+
+      // Danh sách giáo viên chuẩn của Tổ KHTN - CN
+      const defaultTeachers = [
+        { name: 'Võ Văn Hà', subject: 'KHTN (Vật lý - Hóa học)' },
+        { name: 'Nguyễn Sỹ Tuấn', subject: 'KHTN (Sinh học)' },
+        { name: 'Huỳnh Thị Thúy Kiều', subject: 'Công nghệ' }
+      ];
+
+      // Nạp từ AppStorage nếu có thêm tài khoản khác
+      if (window.AppStorage && typeof window.AppStorage.getUsers === 'function') {
+        const allUsers = window.AppStorage.getUsers() || [];
+        allUsers.forEach(u => {
+          if (u.name && !statsMap.has(u.name)) {
+            statsMap.set(u.name, {
+              teacherName: u.name,
+              subject: u.subject || u.mon || 'Khoa học tự nhiên',
+              khtnCount: 0,
+              cnCount: 0,
+              totalCount: 0,
+              returnedCount: 0,
+              borrowingCount: 0
+            });
+          }
+        });
+      }
+
+      defaultTeachers.forEach(t => {
+        if (!statsMap.has(t.name)) {
+          statsMap.set(t.name, {
+            teacherName: t.name,
+            subject: t.subject,
+            khtnCount: 0,
+            cnCount: 0,
+            totalCount: 0,
+            returnedCount: 0,
+            borrowingCount: 0
+          });
+        }
+      });
+
+      // Thống kê chi tiết từ các bản ghi mượn
+      records.forEach(r => {
+        const teacherName = r.teacherName || 'Giáo viên khác';
+        if (!statsMap.has(teacherName)) {
+          statsMap.set(teacherName, {
+            teacherName: teacherName,
+            subject: r.subject || 'KHTN - Công nghệ',
+            khtnCount: 0,
+            cnCount: 0,
+            totalCount: 0,
+            returnedCount: 0,
+            borrowingCount: 0
+          });
+        }
+        const s = statsMap.get(teacherName);
+        s.totalCount += 1;
+        const sub = (r.subject || '').toLowerCase();
+        if (sub.includes('công nghệ')) {
+          s.cnCount += 1;
+        } else {
+          s.khtnCount += 1;
+        }
+        if (r.status === 'Đã trả') {
+          s.returnedCount += 1;
+        } else {
+          s.borrowingCount += 1;
+        }
+      });
+
+      return Array.from(statsMap.values());
+    }
+
+    // Sự kiện khi thay đổi kỳ báo cáo in
+    onPrintPeriodChange(period) {
+      this.currentPrintPeriod = period;
+      this.renderPrintReportContent();
+    }
+
+    // Kết xuất nội dung văn bản in và thống kê chuẩn Nghị định 30 (Times New Roman, A4 ngang)
+    renderPrintReportContent() {
+      const period = this.currentPrintPeriod || 'ALL';
+      const records = this.getRecordsByPeriod(period);
       const tbody = document.getElementById('report-print-tbody');
+      const statsTbody = document.getElementById('report-stats-tbody');
+      const mainTitle = document.getElementById('print-report-main-title');
+      const subTitle = document.getElementById('print-report-sub-title');
+      const dateEl = document.getElementById('print-header-date');
+
+      if (dateEl) {
+        const now = new Date();
+        dateEl.textContent = `Tây Phú, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+      }
+
+      // Xác định tiêu đề báo cáo theo kỳ
+      let periodLabel = 'NĂM HỌC 2026 - 2027';
+      let periodSubLabel = 'Tổ Khoa học tự nhiên – Công nghệ • Năm học 2026 - 2027';
+      if (period === 'HK1') {
+        periodLabel = 'HỌC KỲ I (NĂM HỌC 2026 - 2027)';
+        periodSubLabel = 'Kỳ báo cáo: Học kỳ I (Từ Tháng 9/2026 đến hết Tháng 1/2027)';
+      } else if (period === 'HK2') {
+        periodLabel = 'HỌC KỲ II (NĂM HỌC 2026 - 2027)';
+        periodSubLabel = 'Kỳ báo cáo: Học kỳ II (Từ Tháng 2/2027 đến hết Tháng 5/2027)';
+      } else if (period.startsWith('T')) {
+        const m = period.substring(1);
+        const y = parseInt(m) >= 9 ? 2026 : 2027;
+        periodLabel = `THÁNG ${m}/${y}`;
+        periodSubLabel = `Kỳ báo cáo: Tháng ${m} năm ${y} • Năm học 2026 - 2027`;
+      }
+
+      if (mainTitle) mainTitle.textContent = `SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC - ${periodLabel}`;
+      if (subTitle) subTitle.textContent = periodSubLabel;
+
+      // Render bảng mượn trả chi tiết
       if (tbody) {
         if (records.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-xs italic text-gray-500">Chưa có dữ liệu sử dụng thiết bị trong kỳ báo cáo</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 12px; font-style: italic; color: #666; font-family: 'Times New Roman', Times, serif;">Chưa có lượt mượn thiết bị nào trong ${periodSubLabel.toLowerCase()}</td></tr>`;
         } else {
           tbody.innerHTML = records.map((r, i) => `
-            <tr class="border-b border-black text-center text-[10px]">
-              <td class="p-1 border-r border-black font-bold">${i + 1}</td>
-              <td class="p-1 border-r border-black">${r.date || ''}</td>
-              <td class="p-1 border-r border-black">${r.session || 'Sáng'} (${r.period || ''})</td>
-              <td class="p-1 border-r border-black font-bold">${r.className || ''}</td>
-              <td class="p-1 border-r border-black text-left font-medium">${r.lessonTitle || ''}</td>
-              <td class="p-1 border-r border-black text-left font-semibold">${r.equipmentName || ''}</td>
-              <td class="p-1 border-r border-black font-bold">${r.quantity || 1}</td>
-              <td class="p-1 border-r border-black text-left">${r.teacherName || ''}</td>
-              <td class="p-1 border-r border-black font-semibold">${r.status || 'Đang mượn'}</td>
-              <td class="p-1">${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</td>
+            <tr style="border-bottom: 1px solid black; text-align: center; font-family: 'Times New Roman', Times, serif;">
+              <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${i + 1}</td>
+              <td style="padding: 4px; border: 1px solid black;">${r.date || ''}</td>
+              <td style="padding: 4px; border: 1px solid black;">${r.session || 'Sáng'} (${r.period || ''})</td>
+              <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${r.className || ''}</td>
+              <td style="padding: 4px; border: 1px solid black; text-align: left;">${r.lessonTitle || ''}</td>
+              <td style="padding: 4px; border: 1px solid black; text-align: left; font-weight: 500;">${r.equipmentName || ''}</td>
+              <td style="padding: 4px; border: 1px solid black; font-weight: bold;">${r.quantity || 1}</td>
+              <td style="padding: 4px; border: 1px solid black; text-align: left;">${r.teacherName || ''}</td>
+              <td style="padding: 4px; border: 1px solid black;">${r.status || 'Đang mượn'}</td>
+              <td style="padding: 4px; border: 1px solid black;">${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</td>
             </tr>
           `).join('');
         }
       }
 
+      // Render bảng thống kê lượt mượn theo giáo viên
+      if (statsTbody) {
+        const stats = this.generateTeacherBorrowStats(records);
+        statsTbody.innerHTML = stats.map((s, i) => `
+          <tr style="border-bottom: 1px solid black; text-align: center; font-family: 'Times New Roman', Times, serif;">
+            <td style="padding: 5px; border: 1px solid black; font-weight: bold;">${i + 1}</td>
+            <td style="padding: 5px; border: 1px solid black; text-align: left; font-weight: bold;">${s.teacherName}</td>
+            <td style="padding: 5px; border: 1px solid black; text-align: left;">${s.subject}</td>
+            <td style="padding: 5px; border: 1px solid black;">${s.khtnCount}</td>
+            <td style="padding: 5px; border: 1px solid black;">${s.cnCount}</td>
+            <td style="padding: 5px; border: 1px solid black; font-weight: bold; background-color: #f3f4f6;">${s.totalCount}</td>
+            <td style="padding: 5px; border: 1px solid black; color: #047857; font-weight: bold;">${s.returnedCount}</td>
+            <td style="padding: 5px; border: 1px solid black; color: #b45309; font-weight: bold;">${s.borrowingCount}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // In Sổ Sư Phạm A4 Tổ KHTN - CN
+    printEquipmentReport() {
+      const modal = document.getElementById('modal-print-equipment-report');
+      if (!modal) return;
+      this.currentPrintPeriod = 'ALL';
+      const periodSelect = document.getElementById('print-filter-period');
+      if (periodSelect) periodSelect.value = 'ALL';
+
+      this.renderPrintReportContent();
       modal.classList.add('active');
     }
 
@@ -5533,6 +5723,411 @@
 
     triggerBrowserPrint() {
       window.print();
+    }
+
+    // Xuất file Microsoft Word (.doc) chuẩn Nghị định 30 (A4 Ngang, Times New Roman)
+    exportEquipmentWord() {
+      const period = this.currentPrintPeriod || 'ALL';
+      const records = this.getRecordsByPeriod(period);
+      const stats = this.generateTeacherBorrowStats(records);
+      const now = new Date();
+      const dateStr = `ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+
+      let periodTitle = 'NĂM HỌC 2026 - 2027';
+      if (period === 'HK1') periodTitle = 'HỌC KỲ I (NĂM HỌC 2026 - 2027)';
+      else if (period === 'HK2') periodTitle = 'HỌC KỲ II (NĂM HỌC 2026 - 2027)';
+      else if (period.startsWith('T')) {
+        const m = period.substring(1);
+        const y = parseInt(m) >= 9 ? 2026 : 2027;
+        periodTitle = `THÁNG ${m} NĂM ${y}`;
+      }
+
+      const rowsDetailHtml = records.length === 0 
+        ? `<tr><td colspan="10" align="center" style="padding: 10pt; font-style: italic;">Chưa có dữ liệu mượn thiết bị trong kỳ báo cáo</td></tr>`
+        : records.map((r, i) => `
+            <tr>
+              <td align="center"><b>${i + 1}</b></td>
+              <td align="center">${r.date || ''}</td>
+              <td align="center">${r.session || 'Sáng'} (${r.period || ''})</td>
+              <td align="center"><b>${r.className || ''}</b></td>
+              <td>${r.lessonTitle || ''}</td>
+              <td>${r.equipmentName || ''}</td>
+              <td align="center"><b>${r.quantity || 1}</b></td>
+              <td>${r.teacherName || ''}</td>
+              <td align="center">${r.status || 'Đang mượn'}</td>
+              <td align="center">${r.staffConfirm || 'Nguyễn Sỹ Tuấn'}</td>
+            </tr>
+          `).join('');
+
+      const rowsStatsHtml = stats.map((s, i) => `
+        <tr>
+          <td align="center"><b>${i + 1}</b></td>
+          <td><b>${s.teacherName}</b></td>
+          <td>${s.subject}</td>
+          <td align="center">${s.khtnCount}</td>
+          <td align="center">${s.cnCount}</td>
+          <td align="center" style="background-color:#e5e7eb;"><b>${s.totalCount}</b></td>
+          <td align="center">${s.returnedCount}</td>
+          <td align="center">${s.borrowingCount}</td>
+        </tr>
+      `).join('');
+
+      const wordHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Sổ Theo Dõi Thiết Bị Dạy Học</title>
+          <!--[if gte mso 9]>
+          <xml>
+            <w:WordDocument>
+              <w:View>Print</w:View>
+              <w:Zoom>100</w:Zoom>
+              <w:DoNotOptimizeForBrowser/>
+            </w:WordDocument>
+          </xml>
+          <![endif]-->
+          <style>
+            @page Section1 {
+              size: 841.9pt 595.3pt; /* A4 Landscape */
+              mso-page-orientation: landscape;
+              margin: 36.0pt 36.0pt 36.0pt 36.0pt;
+              mso-header-margin: 36.0pt;
+              mso-footer-margin: 36.0pt;
+            }
+            div.Section1 { page: Section1; }
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 11pt;
+              line-height: 1.35;
+              color: #000;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 15pt;
+              font-family: 'Times New Roman', Times, serif;
+            }
+            th, td {
+              border: 1px solid black;
+              padding: 4pt 6pt;
+              font-size: 10.5pt;
+            }
+            th {
+              background-color: #f2f2f2;
+              font-weight: bold;
+              text-align: center;
+            }
+            .header-table td {
+              border: none !important;
+              padding: 2pt;
+            }
+            .sig-table td {
+              border: none !important;
+              padding: 4pt;
+              text-align: center;
+              vertical-align: top;
+            }
+            h2 {
+              font-size: 15pt;
+              text-align: center;
+              margin: 12pt 0 4pt 0;
+              text-transform: uppercase;
+              font-weight: bold;
+            }
+            .sub-title {
+              font-size: 11.5pt;
+              font-style: italic;
+              text-align: center;
+              margin-bottom: 12pt;
+            }
+            .section-header {
+              font-size: 12pt;
+              font-weight: bold;
+              text-transform: uppercase;
+              margin: 14pt 0 6pt 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="Section1">
+            <!-- Tiêu Ngữ Cơ Quan Chuẩn Nghị Định 30 -->
+            <table class="header-table">
+              <tr>
+                <td width="50%" align="center" style="vertical-align: top;">
+                  <div style="font-size: 12pt; text-transform: uppercase;">UBND XÃ TÂY PHÚ</div>
+                  <div style="font-size: 12.5pt; font-weight: bold; text-transform: uppercase;">TRƯỜNG THCS TÂY PHÚ</div>
+                  <div style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin-top: 2pt;">TỔ KHOA HỌC TỰ NHIÊN - CÔNG NGHỆ</div>
+                  <div style="width: 120pt; border-bottom: 1pt solid black; margin: 4pt auto 0 auto;"></div>
+                </td>
+                <td width="50%" align="center" style="vertical-align: top;">
+                  <div style="font-size: 12pt; font-weight: bold; text-transform: uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                  <div style="font-size: 13pt; font-weight: bold; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</div>
+                  <div style="font-size: 11pt; font-style: italic; margin-top: 4pt;">Tây Phú, ${dateStr}</div>
+                </td>
+              </tr>
+            </table>
+
+            <h2>SỔ THEO DÕI SỬ DỤNG THIẾT BỊ DẠY HỌC - ${periodTitle}</h2>
+            <div class="sub-title">Tổ Khoa học tự nhiên – Công nghệ • Trường THCS Tây Phú • Năm học 2026 - 2027</div>
+
+            <div class="section-header">I. NHẬT KÝ CHI TIẾT MƯỢN - TRẢ THIẾT BỊ DẠY HỌC</div>
+            <table>
+              <thead>
+                <tr>
+                  <th width="5%">STT</th>
+                  <th width="10%">Ngày mượn</th>
+                  <th width="11%">Buổi / Tiết</th>
+                  <th width="6%">Lớp</th>
+                  <th width="22%">Tên bài dạy / Chủ đề bài học</th>
+                  <th width="22%">Tên thiết bị dạy học</th>
+                  <th width="4%">SL</th>
+                  <th width="10%">Giáo viên mượn</th>
+                  <th width="8%">Tình trạng</th>
+                  <th width="10%">Người xác nhận</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsDetailHtml}
+              </tbody>
+            </table>
+
+            <div class="section-header">II. BẢNG THỐNG KÊ SỐ LƯỢT MƯỢN THIẾT BỊ THEO TỪNG GIÁO VIÊN</div>
+            <table>
+              <thead>
+                <tr>
+                  <th width="6%">STT</th>
+                  <th width="24%" align="left">Họ và tên Giáo viên</th>
+                  <th width="20%" align="left">Môn phụ trách</th>
+                  <th width="12%">Lượt KHTN</th>
+                  <th width="12%">Lượt Công nghệ</th>
+                  <th width="14%">Tổng lượt mượn</th>
+                  <th width="10%">Đã trả</th>
+                  <th width="10%">Đang mượn</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsStatsHtml}
+              </tbody>
+            </table>
+
+            <table class="sig-table" style="margin-top: 20pt;">
+              <tr>
+                <td width="33%">
+                  <div style="font-weight: bold; text-transform: uppercase;">HIỆU TRƯỞNG</div>
+                  <div style="font-style: italic; font-size: 10pt; color: #555; margin-bottom: 50pt;">(Ký và đóng dấu)</div>
+                  <div style="font-weight: bold; text-transform: uppercase;">HỒ MINH TRIỀU</div>
+                </td>
+                <td width="34%">
+                  <div style="font-weight: bold; text-transform: uppercase;">TỔ TRƯỞNG KHTN - CN</div>
+                  <div style="font-style: italic; font-size: 10pt; color: #555; margin-bottom: 50pt;">(Ký và ghi rõ họ tên)</div>
+                  <div style="font-weight: bold; text-transform: uppercase;">VÕ VĂN HÀ</div>
+                </td>
+                <td width="33%">
+                  <div style="font-weight: bold; text-transform: uppercase;">CÁN BỘ THIẾT BỊ</div>
+                  <div style="font-style: italic; font-size: 10pt; color: #555; margin-bottom: 50pt;">(Ký và ghi rõ họ tên)</div>
+                  <div style="font-weight: bold; text-transform: uppercase;">NGUYỄN SỸ TUẤN</div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `So_Theo_Doi_Thiet_Bi_${period}_2026_2027.doc`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      if (window.AppToast) {
+        window.AppToast.show('Đã xuất file Word (.doc) chuẩn font Times New Roman, A4 ngang thành công!', 'success');
+      }
+    }
+
+    // Mở modal Thêm Thiết Bị Mới (Admin / Tổ trưởng)
+    openAddEquipmentModal() {
+      if (!this.isAdminOrLeader()) {
+        alert('Chỉ Quản trị viên (Admin) hoặc Tổ trưởng chuyên môn mới có quyền thêm thiết bị!');
+        return;
+      }
+      const modal = document.getElementById('modal-manage-equipment');
+      if (!modal) return;
+
+      document.getElementById('modal-manage-equipment-title').innerHTML = '<span>➕ Thêm Thiết Bị Dạy Học Mới</span>';
+      document.getElementById('manage-eq-is-edit').value = 'false';
+      document.getElementById('manage-eq-original-code').value = '';
+
+      // Tự sinh mã tiếp theo gợi ý
+      const count = this.equipments.length + 1;
+      document.getElementById('manage-eq-code').value = `TB-KHTN-K6-${String(count).padStart(3, '0')}`;
+      document.getElementById('manage-eq-name').value = '';
+      document.getElementById('manage-eq-subject').value = 'Khoa học tự nhiên';
+      document.getElementById('manage-eq-grade').value = 'Khối 6';
+      document.getElementById('manage-eq-lesson').value = '';
+      document.getElementById('manage-eq-week').value = 'Tuần 1';
+      document.getElementById('manage-eq-total').value = 10;
+      document.getElementById('manage-eq-available').value = 10;
+      document.getElementById('manage-eq-unit').value = 'Bộ';
+      document.getElementById('manage-eq-room').value = 'Phòng bộ môn';
+      document.getElementById('manage-eq-status').value = 'Sẵn sàng sử dụng';
+
+      modal.classList.add('active');
+    }
+
+    // Mở modal Chỉnh Sửa Thiết Bị (Admin / Tổ trưởng)
+    openEditEquipmentModal(code) {
+      if (!this.isAdminOrLeader()) {
+        alert('Chỉ Quản trị viên (Admin) hoặc Tổ trưởng chuyên môn mới có quyền chỉnh sửa thiết bị!');
+        return;
+      }
+      const eq = this.equipments.find(e => e.code === code);
+      if (!eq) return;
+
+      const modal = document.getElementById('modal-manage-equipment');
+      if (!modal) return;
+
+      document.getElementById('modal-manage-equipment-title').innerHTML = '<span>✏️ Chỉnh Sửa Thiết Bị Dạy Học</span>';
+      document.getElementById('manage-eq-is-edit').value = 'true';
+      document.getElementById('manage-eq-original-code').value = eq.code;
+
+      document.getElementById('manage-eq-code').value = eq.code;
+      document.getElementById('manage-eq-name').value = eq.name || '';
+      document.getElementById('manage-eq-subject').value = eq.subject || 'Khoa học tự nhiên';
+      document.getElementById('manage-eq-grade').value = eq.grade || 'Khối 6';
+      document.getElementById('manage-eq-lesson').value = eq.lesson || '';
+      document.getElementById('manage-eq-week').value = eq.week || '';
+      document.getElementById('manage-eq-total').value = eq.total || 10;
+      document.getElementById('manage-eq-available').value = eq.available !== undefined ? eq.available : (eq.total || 10);
+      document.getElementById('manage-eq-unit').value = eq.unit || 'Bộ';
+      document.getElementById('manage-eq-room').value = eq.room || eq.location || 'Phòng bộ môn';
+      document.getElementById('manage-eq-status').value = eq.status || 'Sẵn sàng sử dụng';
+
+      modal.classList.add('active');
+    }
+
+    closeManageEquipmentModal() {
+      const modal = document.getElementById('modal-manage-equipment');
+      if (modal) modal.classList.remove('active');
+    }
+
+    // Xử lý lưu thiết bị (Thêm mới hoặc Cập nhật)
+    async handleSaveEquipmentSubmit(e) {
+      e.preventDefault();
+      const isEdit = document.getElementById('manage-eq-is-edit').value === 'true';
+      const origCode = document.getElementById('manage-eq-original-code').value;
+
+      const newCode = document.getElementById('manage-eq-code').value.trim();
+      const name = document.getElementById('manage-eq-name').value.trim();
+      const subject = document.getElementById('manage-eq-subject').value;
+      const grade = document.getElementById('manage-eq-grade').value;
+      const lesson = document.getElementById('manage-eq-lesson').value.trim();
+      const week = document.getElementById('manage-eq-week').value.trim();
+      const total = parseInt(document.getElementById('manage-eq-total').value) || 1;
+      const available = parseInt(document.getElementById('manage-eq-available').value) || 0;
+      const unit = document.getElementById('manage-eq-unit').value.trim() || 'Bộ';
+      const room = document.getElementById('manage-eq-room').value.trim() || 'Phòng bộ môn';
+      const status = document.getElementById('manage-eq-status').value.trim() || 'Sẵn sàng sử dụng';
+
+      const eqData = {
+        code: newCode,
+        name: name,
+        subject: subject,
+        grade: grade,
+        lesson: lesson,
+        week: week,
+        total: total,
+        available: Math.min(total, available),
+        unit: unit,
+        room: room,
+        location: room,
+        status: status
+      };
+
+      if (isEdit) {
+        const index = this.equipments.findIndex(eq => eq.code === origCode);
+        if (index !== -1) {
+          this.equipments[index] = eqData;
+        }
+      } else {
+        if (this.equipments.some(eq => eq.code === newCode)) {
+          alert(`Mã thiết bị [${newCode}] đã tồn tại trong hệ thống! Vui lòng chọn mã khác.`);
+          return;
+        }
+        this.equipments.unshift(eqData);
+      }
+
+      await this.pushToCloud();
+      this.renderEquipmentView();
+      this.closeManageEquipmentModal();
+
+      if (window.AppToast) {
+        window.AppToast.show(isEdit ? `Đã cập nhật thiết bị [${newCode}] thành công!` : `Đã thêm thiết bị mới [${newCode}] vào kho thành công!`, 'success');
+      }
+    }
+
+    // Xóa thiết bị khỏi kho (Dành cho Admin / Tổ trưởng)
+    async deleteEquipment(code) {
+      if (!this.isAdminOrLeader()) {
+        alert('Chỉ Quản trị viên (Admin) hoặc Tổ trưởng mới có quyền xóa thiết bị!');
+        return;
+      }
+      const eq = this.equipments.find(e => e.code === code);
+      if (!eq) return;
+
+      const activeBorrow = this.borrowRecords.find(r => r.equipmentCode === code && r.status === 'Đang mượn');
+      if (activeBorrow) {
+        alert(`Thiết bị [${code}] đang được giáo viên ${activeBorrow.teacherName} mượn giảng dạy. Không thể xóa lúc này!`);
+        return;
+      }
+
+      if (!confirm(`Thầy/Cô có chắc chắn muốn xóa thiết bị [${code} - ${eq.name}] khỏi danh mục không?`)) {
+        return;
+      }
+
+      const index = this.equipments.findIndex(e => e.code === code);
+      if (index !== -1) {
+        this.equipments.splice(index, 1);
+        await this.pushToCloud();
+        this.renderEquipmentView();
+        if (window.AppToast) {
+          window.AppToast.show(`Đã xóa thiết bị [${code}] thành công!`, 'success');
+        }
+      }
+    }
+
+    // Xóa phiếu mượn thiết bị của giáo viên (Dành cho Admin / Tổ trưởng)
+    async deleteBorrowRecord(recordId) {
+      if (!this.isAdminOrLeader()) {
+        alert('Chỉ Quản trị viên (Admin) hoặc Tổ trưởng mới có quyền xóa phiếu mượn!');
+        return;
+      }
+      if (!confirm('Thầy/Cô có chắc chắn muốn xóa phiếu mượn này khỏi Sổ theo dõi không?')) {
+        return;
+      }
+
+      const index = this.borrowRecords.findIndex(r => r.id === recordId);
+      if (index === -1) return;
+
+      const rec = this.borrowRecords[index];
+      // Nếu phiếu đang mượn thì tự động hoàn trả lại số lượng khả dụng
+      if (rec.status === 'Đang mượn') {
+        const eq = this.equipments.find(e => e.code === rec.equipmentCode);
+        if (eq) {
+          eq.available = Math.min(eq.total, eq.available + (rec.quantity || 1));
+        }
+      }
+
+      this.borrowRecords.splice(index, 1);
+      await this.pushToCloud();
+      this.renderEquipmentView();
+      if (window.AppToast) {
+        window.AppToast.show('Đã xóa phiếu mượn thiết bị thành công! Dữ liệu đã đồng bộ lên Cloud.', 'success');
+      }
     }
 
     // Xuất file Excel bằng SheetJS

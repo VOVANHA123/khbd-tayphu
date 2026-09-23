@@ -286,3 +286,52 @@ body {
     width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   PRINT STYLES FOR SỔ THIẾT BỊ (A4 LANDSCAPE)
+   Chuẩn Thể Thức Nghị Định 30/2020/NĐ-CP - Khổ Ngang, Font Times New Roman
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: 'Times New Roman', Times, serif !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #modal-print-equipment-report,
+  #modal-print-equipment-report * {
+    visibility: visible;
+  }
+  #modal-print-equipment-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  #modal-print-equipment-report .modal-panel {
+    max-width: 100% !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}
+
