@@ -188,56 +188,73 @@ window.DriveAPI = (function() {
    */
   async function uploadPlan(payload) {
     const url = window.AppStorage.getGasUrl();
-    
-    // Nếu chưa cấu hình GAS URL, tự động lưu cục bộ (Offline / Demo)
+
+    // CHIẾN LƯỢC AN TOÀN TUYỆT ĐỐI: Luôn lưu vào LocalStorage trước để không bao giờ bị mất bài
+    const localPlan = window.AppStorage.addOrUpdatePlan({
+      ...payload,
+      id: payload.id || ('KHBD_' + Date.now()),
+      ngayNop: payload.ngayNop || new Date().toISOString(),
+      trangThai: payload.trangThai || 'CHO_DUYET',
+      driveFileId: payload.driveFileId || '',
+      driveViewUrl: payload.docsUrl || payload.driveViewUrl || '',
+      driveDownloadUrl: payload.driveDownloadUrl || '#'
+    });
+
+    // Nếu chưa cấu hình GAS URL, trả về thành công với mode DEMO
     if (!url) {
-      console.log('⚡ Chế độ Demo: Lưu giáo án cục bộ (Chưa cấu hình Google Apps Script URL)');
-      const savedPlan = window.AppStorage.addOrUpdatePlan({
-        ...payload,
-        id: payload.id || ('KHBD_' + Date.now()),
-        ngayNop: new Date().toISOString(),
-        trangThai: 'CHO_DUYET',
-        driveFileId: '',
-        driveViewUrl: payload.docsUrl || '', // Không gán link docs giả gây 404
-        driveDownloadUrl: '#'
-      });
-      return { status: 'success', plan: savedPlan, mode: 'DEMO' };
+      console.log('⚡ Chế độ Demo: Lưu giáo án an toàn cục bộ (Chưa cấu hình Google Apps Script URL)');
+      return { status: 'success', plan: localPlan, mode: 'DEMO' };
     }
 
-    // Gửi lên Google Apps Script Live
+    // Gửi lên Google Apps Script Live kèm bộ ngắt thời gian Timeout 12 giây
     try {
       const body = JSON.stringify({
         action: 'uploadPlan',
         ...payload
       });
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Tránh CORS preflight với GAS
         body: body,
-        redirect: 'follow'
+        redirect: 'follow',
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       const result = await response.json();
-      if (result.status === 'success') {
-        // Cập nhật lại cache cục bộ
-        window.AppStorage.addOrUpdatePlan({
+      if (result && result.status === 'success' && result.plan) {
+        // Cập nhật lại cache cục bộ với thông tin Drive từ Cloud
+        const updated = window.AppStorage.addOrUpdatePlan({
           ...payload,
-          id: result.plan.id,
-          driveFileId: result.plan.driveFileId,
-          driveViewUrl: result.plan.driveViewUrl,
-          driveDownloadUrl: result.plan.driveDownloadUrl,
+          id: result.plan.id || localPlan.id,
+          driveFileId: result.plan.driveFileId || '',
+          driveViewUrl: result.plan.driveViewUrl || payload.docsUrl || '',
+          driveDownloadUrl: result.plan.driveDownloadUrl || '#',
           trangThai: 'CHO_DUYET',
-          ngayNop: result.plan.ngayNop
+          ngayNop: result.plan.ngayNop || localPlan.ngayNop
         });
+        return { status: 'success', plan: updated, message: 'Đã lưu lên Google Drive thành công!' };
       }
-      return result;
+
+      // Trường hợp Apps Script trả về lỗi nội bộ nhưng đã lưu cục bộ an toàn
+      return { 
+        status: 'warning', 
+        message: 'Đã lưu kế hoạch bài dạy an toàn trong hệ thống (Đồng bộ Drive: ' + ((result && result.message) || 'Đang chờ') + ')', 
+        plan: localPlan 
+      };
     } catch (err) {
-      console.error('Lỗi khi tải lên Google Drive:', err);
-      const errMsg = err ? (err.message || String(err)) : 'Lỗi kết nối mạng';
-      // Fallback lưu local
-      const savedPlan = window.AppStorage.addOrUpdatePlan(payload);
-      return { status: 'warning', message: 'Đã lưu tạm trên máy (Lỗi đồng bộ Google Drive: ' + errMsg + ')', plan: savedPlan };
+      console.warn('Lỗi kết nối khi tải lên Google Drive (đã lưu an toàn cục bộ):', err);
+      const isTimeout = err && (err.name === 'AbortError' || (err.message && err.message.includes('aborted')));
+      const errMsg = isTimeout ? 'Máy chủ Google phản hồi chậm' : (err ? (err.message || String(err)) : 'Lỗi kết nối');
+      return { 
+        status: 'warning', 
+        message: `Đã lưu kế hoạch bài dạy an toàn trên thiết bị (${errMsg}). Hệ thống sẽ tự động đồng bộ lên Drive khi đường truyền ổn định.`, 
+        plan: localPlan 
+      };
     }
   }
 

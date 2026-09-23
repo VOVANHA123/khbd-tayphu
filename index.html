@@ -154,6 +154,12 @@
 
           <!-- Vertical Navigation Buttons -->
           <nav class="space-y-1.5" id="sidebar-main-nav">
+            <!-- Nút Nộp KHBD Nhanh -->
+            <button onclick="window.UITeacher.openUploadModal()" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-blue-500/25 active:scale-95 transition-all mb-2 cursor-pointer">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span>+ Nộp Kế hoạch bài dạy mới</span>
+            </button>
+
             <!-- Tab 1: Giáo viên -->
             <button id="nav-tab-teacher" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left bg-blue-600 text-white shadow-md shadow-blue-500/20 group">
               <div class="flex items-center gap-2.5">
@@ -724,14 +730,14 @@
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
-          <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal()" class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs md:text-sm shadow-md transition flex items-center gap-1.5">
+          <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal()" class="px-4 py-2.5 rounded-xl bg-white text-teal-800 hover:bg-teal-50 font-bold text-xs md:text-sm shadow-md transition flex items-center gap-1.5 cursor-pointer">
             <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span>Mượn Thiết bị Bổ sung</span>
           </button>
-          <button onclick="window.EquipmentSyncEngine.printEquipmentReport()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5">
+          <button onclick="window.EquipmentSyncEngine.printEquipmentReport()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
             <span>🖨️ In Sổ Sư Phạm A4</span>
           </button>
-          <button onclick="window.EquipmentSyncEngine.exportEquipmentExcel()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-emerald-600 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5">
+          <button onclick="window.EquipmentSyncEngine.exportEquipmentExcel()" class="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-emerald-600 text-white font-semibold text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer">
             <span>📊 Xuất Excel</span>
           </button>
         </div>
@@ -741,8 +747,8 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="glass-card p-4 border-l-4 border-l-teal-500">
           <div class="text-slate-500 text-xs font-medium">Tổng thiết bị KHTN-CN trong kho</div>
-          <div id="eq-kpi-total" class="text-2xl font-bold text-slate-800 font-heading mt-1">0</div>
-          <div class="text-[11px] text-teal-700 font-semibold mt-0.5">26 danh mục (TT38 & Dùng chung)</div>
+          <div id="eq-kpi-total" class="text-2xl font-bold text-slate-800 font-heading mt-1">318</div>
+          <div class="text-[11px] text-teal-700 font-semibold mt-0.5">318 danh mục (KHTN & CN 6-9 theo PL3)</div>
         </div>
         <div class="glass-card p-4 border-l-4 border-l-emerald-500">
           <div class="text-slate-500 text-xs font-medium">Khả dụng sẵn sàng mượn</div>
@@ -761,9 +767,88 @@
         </div>
       </div>
 
-      <!-- Sổ Theo Dõi Mượn Trả Section -->
-      <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="p-4 md:p-5 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <!-- Chuyển Đổi Phân Hệ: Danh Mục 318 TB vs Sổ Mượn Trả -->
+      <div class="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit border border-slate-200">
+        <button id="btn-subtab-eq-catalog" onclick="window.EquipmentSyncEngine.switchSubTab('catalog')" class="px-4 py-2 rounded-xl bg-teal-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+          <span>📋 Danh Mục Thiết Bị (318 TB KHTN - CN)</span>
+          <span class="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold">PL3 Mới</span>
+        </button>
+        <button id="btn-subtab-eq-tracking" onclick="window.EquipmentSyncEngine.switchSubTab('tracking')" class="px-4 py-2 rounded-xl bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs border border-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+          <span>📖 Sổ Theo Dõi Mượn - Trả</span>
+        </button>
+      </div>
+
+      <!-- ================= SECTION 1: BẢNG DANH MỤC 318 THIẾT BỊ DẠY HỌC (PL3) ================= -->
+      <div id="eq-section-catalog" class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-4 md:p-5 border-b border-slate-100 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 bg-gradient-to-r from-teal-50/60 to-white">
+          <div>
+            <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
+              <span>📋 Danh Mục Thiết Bị Dạy Học Tổ KHTN - Công Nghệ</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold border border-teal-200">318 Thiết bị chuẩn PL3</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Đầy đủ thiết bị các khối 6, 7, 8, 9 môn Khoa học tự nhiên & Công nghệ cập nhật mới nhất từ 7 file Phụ lục 3 (PL3)
+            </p>
+          </div>
+          
+          <!-- Filter Controls -->
+          <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <!-- Filter Subject -->
+            <select id="eq-catalog-filter-subject" onchange="window.EquipmentSyncEngine.catalogSubject = this.value; window.EquipmentSyncEngine.renderEquipmentCatalogTable();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+              <option value="ALL">-- Tất cả môn học (318 TB) --</option>
+              <option value="KHTN">Khoa học tự nhiên (230 TB)</option>
+              <option value="CN">Công nghệ (85 TB)</option>
+              <option value="DC">Dùng chung (3 TB)</option>
+            </select>
+
+            <!-- Filter Grade -->
+            <select id="eq-catalog-filter-grade" onchange="window.EquipmentSyncEngine.catalogGrade = this.value; window.EquipmentSyncEngine.renderEquipmentCatalogTable();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
+              <option value="ALL">-- Tất cả các khối --</option>
+              <option value="Khối 6">Khối 6 (83 TB)</option>
+              <option value="Khối 7">Khối 7 (73 TB)</option>
+              <option value="Khối 8">Khối 8 (85 TB)</option>
+              <option value="Khối 9">Khối 9 (74 TB)</option>
+            </select>
+
+            <!-- Search Keyword -->
+            <div class="relative flex-1 sm:w-56">
+              <input type="text" id="eq-catalog-search" oninput="window.EquipmentSyncEngine.catalogKeyword = this.value; window.EquipmentSyncEngine.renderEquipmentCatalogTable();" placeholder="Tìm tên thiết bị, bài dạy..." class="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+              <span class="absolute left-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
+            </div>
+
+            <!-- Counter Badge -->
+            <div class="text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-lg whitespace-nowrap">
+              <span>Hiển thị: </span><span id="eq-catalog-count" class="font-bold text-teal-700">318</span> / 318
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Table -->
+        <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200 shadow-xs">
+              <tr class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                <th class="px-3 py-3 text-center w-10">STT</th>
+                <th class="px-3 py-3 w-32">Mã TB</th>
+                <th class="px-3 py-3 min-w-[260px]">Tên thiết bị & Dụng cụ thí nghiệm</th>
+                <th class="px-3 py-3 w-40">Môn học & Khối</th>
+                <th class="px-3 py-3 min-w-[220px]">Bài dạy & Tiết theo PPCT</th>
+                <th class="px-3 py-3 w-36">Phòng bộ môn</th>
+                <th class="px-3 py-3 text-center w-24">Số lượng</th>
+                <th class="px-3 py-3 text-center w-24">Trạng thái</th>
+                <th class="px-3 py-3 text-right w-24">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="eq-catalog-tbody" class="divide-y divide-slate-100">
+              <!-- Rendered by window.EquipmentSyncEngine.renderEquipmentCatalogTable() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= SECTION 2: SỔ THEO DÕI MƯỢN TRẢ THIẾT BỊ ================= -->
+      <div id="eq-section-tracking" style="display: none;" class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-4 md:p-5 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-gradient-to-r from-teal-50/50 to-white">
           <div>
             <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
               <span>📖 Sổ Theo Dõi Sử Dụng Thiết Bị Dạy Học</span>
@@ -774,17 +859,17 @@
           
           <!-- Filters -->
           <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <select id="eq-filter-week" onchange="window.EquipmentSyncEngine.currentFilterWeek = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+            <select id="eq-filter-week" onchange="window.EquipmentSyncEngine.currentFilterWeek = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
               <option value="ALL">-- Tất cả 35 tuần --</option>
             </select>
 
-            <select id="eq-filter-status" onchange="window.EquipmentSyncEngine.currentFilterStatus = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+            <select id="eq-filter-status" onchange="window.EquipmentSyncEngine.currentFilterStatus = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
               <option value="ALL">-- Tất cả trạng thái --</option>
               <option value="Đang mượn">Đang mượn</option>
               <option value="Đã trả">Đã trả</option>
             </select>
 
-            <select id="eq-filter-teacher" onchange="window.EquipmentSyncEngine.currentFilterTeacher = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500">
+            <select id="eq-filter-teacher" onchange="window.EquipmentSyncEngine.currentFilterTeacher = this.value; window.EquipmentSyncEngine.renderEquipmentView();" class="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
               <option value="ALL">-- Tất cả giáo viên --</option>
             </select>
 

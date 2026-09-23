@@ -11,7 +11,7 @@
 
   const DEFAULT_FIREBASE_DB_URL = "https://thidua-lop-9a4-79dca-default-rtdb.asia-southeast1.firebasedatabase.app";
   const FIREBASE_DB_PATH = 'thiet_bi_2026/data';
-  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V2';
+  const LOCAL_STORAGE_KEY = 'KHBD_EQUIPMENT_DATA_CACHE_V3';
   const CLIENT_SESSION_ID = 'khbd_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString().slice(-4);
   const localBroadcast = ('BroadcastChannel' in window) ? new BroadcastChannel('thietbi_cross_tab_sync_v2') : null;
 
@@ -4492,6 +4492,12 @@
       this.currentFilterTeacher = 'ALL';
       this.searchKeyword = '';
 
+      // Trạng thái Phân hệ Danh mục 318 Thiết bị Dạy học (PL3)
+      this.activeSubTab = 'catalog'; // 'catalog' | 'tracking'
+      this.catalogSubject = 'ALL';
+      this.catalogGrade = 'ALL';
+      this.catalogKeyword = '';
+
       this.initLocalData();
       this.setupListeners();
       this.initFirebase();
@@ -4502,10 +4508,10 @@
         const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed.equipments && Array.isArray(parsed.equipments) && parsed.equipments.length >= 100) {
+          if (parsed.equipments && Array.isArray(parsed.equipments) && parsed.equipments.length >= 318) {
             this.equipments = parsed.equipments;
           } else {
-            // Tự động nâng cấp danh mục 315+ thiết bị mới nhất từ PL3
+            // Tự động nâng cấp toàn diện 318 thiết bị mới nhất từ PL3 môn KHTN & Công nghệ
             this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
           }
           if (parsed.borrowRecords && Array.isArray(parsed.borrowRecords)) {
@@ -4516,7 +4522,7 @@
         console.warn('Không thể đọc cache thiết bị từ LocalStorage:', e);
       }
 
-      if (!this.equipments || this.equipments.length === 0) {
+      if (!this.equipments || this.equipments.length < 318) {
         this.equipments = JSON.parse(JSON.stringify(FALLBACK_KHTN_EQUIPMENTS));
       }
     }
@@ -4962,18 +4968,163 @@
       return list;
     }
 
+    // Chuyển đổi giữa 2 chế độ xem: Danh mục 318 thiết bị & Sổ theo dõi mượn trả
+    switchSubTab(tabName) {
+      this.activeSubTab = tabName;
+      const btnCatalog = document.getElementById('btn-subtab-eq-catalog');
+      const btnTracking = document.getElementById('btn-subtab-eq-tracking');
+      const secCatalog = document.getElementById('eq-section-catalog');
+      const secTracking = document.getElementById('eq-section-tracking');
+
+      if (tabName === 'catalog') {
+        if (btnCatalog) {
+          btnCatalog.className = "px-4 py-2 rounded-xl bg-teal-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5";
+        }
+        if (btnTracking) {
+          btnTracking.className = "px-4 py-2 rounded-xl bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs border border-slate-200 transition flex items-center gap-1.5";
+        }
+        if (secCatalog) secCatalog.style.display = 'block';
+        if (secTracking) secTracking.style.display = 'none';
+        this.renderEquipmentCatalogTable();
+      } else {
+        if (btnCatalog) {
+          btnCatalog.className = "px-4 py-2 rounded-xl bg-white text-slate-700 hover:bg-slate-100 font-semibold text-xs border border-slate-200 transition flex items-center gap-1.5";
+        }
+        if (btnTracking) {
+          btnTracking.className = "px-4 py-2 rounded-xl bg-teal-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5";
+        }
+        if (secCatalog) secCatalog.style.display = 'none';
+        if (secTracking) secTracking.style.display = 'block';
+      }
+    }
+
+    // Lọc danh sách danh mục 318 thiết bị
+    getFilteredCatalog() {
+      const allEqs = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
+      const sub = this.catalogSubject || 'ALL';
+      const grade = this.catalogGrade || 'ALL';
+      const kw = (this.catalogKeyword || '').toLowerCase().trim();
+
+      return allEqs.filter(eq => {
+        // Lọc môn
+        if (sub !== 'ALL') {
+          const eqSub = (eq.subject || '').toLowerCase();
+          if (sub === 'KHTN' && !eqSub.includes('khoa học tự nhiên')) return false;
+          if (sub === 'CN' && !eqSub.includes('công nghệ')) return false;
+          if (sub === 'DC' && !eqSub.includes('dùng chung')) return false;
+        }
+
+        // Lọc khối
+        if (grade !== 'ALL') {
+          const eqGrade = (eq.grade || '');
+          if (!eqGrade.includes(grade) && !eqGrade.includes('Toàn trường')) return false;
+        }
+
+        // Lọc từ khóa
+        if (kw) {
+          const matchCode = (eq.code || '').toLowerCase().includes(kw);
+          const matchName = (eq.name || '').toLowerCase().includes(kw);
+          const matchLesson = (eq.lesson || '').toLowerCase().includes(kw);
+          const matchRoom = (eq.room || eq.location || '').toLowerCase().includes(kw);
+          if (!matchCode && !matchName && !matchLesson && !matchRoom) return false;
+        }
+
+        return true;
+      });
+    }
+
+    // Hiển thị bảng Danh Mục 318 Thiết Bị
+    renderEquipmentCatalogTable() {
+      const tbody = document.getElementById('eq-catalog-tbody');
+      const counterEl = document.getElementById('eq-catalog-count');
+      if (!tbody) return;
+
+      const filtered = this.getFilteredCatalog();
+      if (counterEl) counterEl.innerText = filtered.length;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="px-6 py-12 text-center text-slate-400 text-xs">
+              <div class="text-3xl mb-2">🔍</div>
+              <div class="font-medium text-slate-600">Không tìm thấy thiết bị nào phù hợp với bộ lọc</div>
+              <div class="text-[11px] text-slate-400 mt-1">Thầy/Cô hãy thử tìm từ khóa khác hoặc chuyển môn học/khối lớp</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((eq, index) => {
+        const isKHTN = (eq.subject || '').includes('Khoa học tự nhiên');
+        const isCN = (eq.subject || '').includes('Công nghệ');
+        const badgeSubjectColor = isKHTN ? 'bg-blue-50 text-blue-700 border-blue-200' : (isCN ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-purple-50 text-purple-700 border-purple-200');
+        const isAvailable = (eq.available || 0) > 0;
+
+        return `
+          <tr class="hover:bg-teal-50/30 transition text-xs border-b border-slate-100">
+            <td class="px-3 py-3 text-center font-bold text-slate-400 text-[11px]">${index + 1}</td>
+            <td class="px-3 py-3">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[11px] font-bold border border-slate-200 whitespace-nowrap">
+                ${eq.code}
+              </span>
+            </td>
+            <td class="px-3 py-3">
+              <div class="font-semibold text-slate-900 leading-snug max-w-md">${eq.name}</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <div class="flex flex-col gap-1 items-start">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeSubjectColor}">
+                  ${eq.subject}
+                </span>
+                <span class="text-[11px] font-semibold text-slate-600 pl-1">
+                  ${eq.grade}
+                </span>
+              </div>
+            </td>
+            <td class="px-3 py-3">
+              <div class="font-medium text-slate-800 leading-snug">${eq.lesson || ''}</div>
+              <div class="text-[11px] text-slate-400 font-mono mt-0.5">${eq.week || ''}</div>
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap">
+              <div class="text-slate-600 font-medium flex items-center gap-1 text-[11px]">
+                <span class="text-teal-600">📍</span> ${eq.room || eq.location || 'Phòng bộ môn'}
+              </div>
+            </td>
+            <td class="px-3 py-3 text-center whitespace-nowrap">
+              <div class="font-bold text-slate-900 text-xs">${eq.available} / ${eq.total}</div>
+              <div class="text-[10px] text-slate-500">${eq.unit || 'Bộ'}</div>
+            </td>
+            <td class="px-3 py-3 text-center whitespace-nowrap">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isAvailable ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                ${isAvailable ? '● Sẵn sàng' : '✕ Đã mượn hết'}
+              </span>
+            </td>
+            <td class="px-3 py-3 text-right whitespace-nowrap">
+              <button onclick="window.EquipmentSyncEngine.openQuickBorrowModal('${eq.code}')" ${!isAvailable ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] shadow-sm transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1" title="Đăng ký mượn thiết bị này">
+                <span>+ Mượn</span>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     // Cập nhật giao diện Tab Thiết bị
     renderEquipmentView() {
       const container = document.getElementById('view-equipment');
       if (!container) return;
 
+      // Luôn kết xuất Bảng Danh mục 318 thiết bị
+      this.renderEquipmentCatalogTable();
+
       const user = window.AppStorage ? window.AppStorage.getCurrentUser() : null;
-      const khtnEquipments = this.getKHTNEquipments();
+      const allEquipments = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
       const records = this.getFilteredRecords();
 
-      // Thống kê KPI
-      const totalEqCount = khtnEquipments.reduce((sum, e) => sum + (e.total || 0), 0);
-      const availableEqCount = khtnEquipments.reduce((sum, e) => sum + (e.available || 0), 0);
+      // Thống kê KPI trên toàn bộ 318 thiết bị KHTN-CN
+      const totalEqCount = allEquipments.reduce((sum, e) => sum + (e.total || 0), 0);
+      const availableEqCount = allEquipments.reduce((sum, e) => sum + (e.available || 0), 0);
       const activeBorrowRecords = this.borrowRecords.filter(r => r.status === 'Đang mượn');
       const myBorrowCount = user ? this.borrowRecords.filter(r => r.teacherName === user.name && r.status === 'Đang mượn').length : 0;
 
@@ -5138,21 +5289,60 @@
       }
     }
 
-    // Mở modal mượn thiết bị nhanh
-    openQuickBorrowModal() {
+    // Mở modal mượn thiết bị nhanh (hỗ trợ truyền presetCode để tự động chọn thiết bị)
+    openQuickBorrowModal(presetCode = null) {
       const modal = document.getElementById('modal-quick-borrow-equipment');
       if (!modal) return;
 
       const selectEl = document.getElementById('quick-borrow-equipment-select');
+      const allEqs = (this.equipments && this.equipments.length >= 318) ? this.equipments : FALLBACK_KHTN_EQUIPMENTS;
+
       if (selectEl) {
-        const khtnEquipments = this.getKHTNEquipments();
-        selectEl.innerHTML = khtnEquipments.map(eq => {
-          const avail = eq.available > 0 ? `(Còn ${eq.available} ${eq.unit})` : `(ĐÃ HẾT)`;
-          return `<option value="${eq.code}" ${eq.available <= 0 ? 'disabled' : ''}>${eq.name} ${avail} [${eq.grade}]</option>`;
-        }).join('');
+        // Nhóm thiết bị chuyên biệt theo môn và khối chuẩn xác
+        const groups = [
+          { label: 'Khoa học tự nhiên - Khối 6 (65 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('6')) },
+          { label: 'Khoa học tự nhiên - Khối 7 (53 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('7')) },
+          { label: 'Khoa học tự nhiên - Khối 8 (57 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('8')) },
+          { label: 'Khoa học tự nhiên - Khối 9 (55 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Khoa học tự nhiên') && (e.grade || '').includes('9')) },
+          { label: 'Công nghệ - Khối 6 (18 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('6')) },
+          { label: 'Công nghệ - Khối 7 (20 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('7')) },
+          { label: 'Công nghệ - Khối 8 (28 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('8')) },
+          { label: 'Công nghệ - Khối 9 (19 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Công nghệ') && (e.grade || '').includes('9')) },
+          { label: 'Thiết bị dùng chung (3 thiết bị)', items: allEqs.filter(e => (e.subject || '').includes('Dùng chung')) }
+        ];
+
+        selectEl.innerHTML = groups.map(g => `
+          <optgroup label="${g.label}">
+            ${g.items.map(eq => {
+              const avail = eq.available > 0 ? `(Còn ${eq.available} ${eq.unit})` : `(ĐÃ HẾT)`;
+              return `<option value="${eq.code}" ${eq.available <= 0 ? 'disabled' : ''}>[${eq.code}] ${eq.name} ${avail}</option>`;
+            }).join('')}
+          </optgroup>
+        `).join('');
+
+        if (presetCode) {
+          selectEl.value = presetCode;
+        }
       }
 
-      document.getElementById('quick-borrow-date').value = new Date().toISOString().split('T')[0];
+      // Tự động điền bài học và phòng nếu được chọn sẵn từ bảng danh mục
+      if (presetCode) {
+        const foundEq = allEqs.find(e => e.code === presetCode);
+        if (foundEq) {
+          const lessonInput = document.getElementById('quick-borrow-lesson');
+          const roomInput = document.getElementById('quick-borrow-room');
+          const weekInput = document.getElementById('quick-borrow-week');
+          if (lessonInput && foundEq.lesson) lessonInput.value = foundEq.lesson;
+          if (roomInput) roomInput.value = foundEq.room || foundEq.location || 'Phòng TH KHTN';
+          if (weekInput && foundEq.week) {
+            const matchW = foundEq.week.match(/Tuần\s*(\d+)/i);
+            if (matchW) weekInput.value = matchW[1];
+          }
+        }
+      }
+
+      const dateEl = document.getElementById('quick-borrow-date');
+      if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
       modal.classList.add('active');
     }
 
