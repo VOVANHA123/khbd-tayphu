@@ -79,10 +79,12 @@
         </div>
 
         <!-- Academic Info Pill (35 Weeks) -->
-        <div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+        <div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200" title="Tuần học thực tế theo lịch năm học">
           <span>📅 Năm học 2026 - 2027</span>
           <span class="text-slate-300">|</span>
-          <span class="text-blue-600">35 Tuần</span>
+          <!-- id: header-current-week – cập nhật tự động bởi school-calendar.js -->
+          <span id="header-current-week" class="text-blue-600">Tuần —</span>
+          <span class="text-slate-400 text-[10px]">/ 35</span>
         </div>
 
         <!-- Latest Version Badge -->
@@ -231,16 +233,20 @@
 
           <div class="space-y-1.5">
             <div class="flex items-baseline justify-between">
-              <div class="text-lg font-bold font-heading text-white">Tuần 3 <span class="text-xs font-normal text-slate-300">/ 35 Tuần</span></div>
-              <span class="text-xs font-bold text-emerald-400">Học kỳ I</span>
+              <!-- ↓ id: sidebar-week-display – cập nhật tự động bởi school-calendar.js -->
+              <div id="sidebar-week-display" class="text-lg font-bold font-heading text-white">Tuần — <span class="text-xs font-normal text-slate-300">/ 35 Tuần</span></div>
+              <!-- ↓ id: sidebar-semester-label -->
+              <span id="sidebar-semester-label" class="text-xs font-bold text-emerald-400">Đang tính...</span>
             </div>
             <!-- Progress Bar -->
             <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-              <div class="bg-gradient-to-r from-blue-400 to-emerald-400 h-2 rounded-full" style="width: 8.5%"></div>
+              <!-- ↓ id: sidebar-progress-bar -->
+              <div id="sidebar-progress-bar" class="bg-gradient-to-r from-blue-400 to-emerald-400 h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
-              <span>Đã hoàn thành: 8.5%</span>
-              <span>Còn 32 tuần</span>
+              <!-- ↓ id: sidebar-progress-pct & sidebar-weeks-left -->
+              <span id="sidebar-progress-pct">Đã hoàn thành: 0%</span>
+              <span id="sidebar-weeks-left">Còn 35 tuần</span>
             </div>
           </div>
 
@@ -2329,7 +2335,18 @@
   <script src="js/ui-teacher.js"></script>
   <script src="js/ui-reviewer.js"></script>
   <script src="js/ui-admin.js"></script>
+  <!-- Lịch tuần học tự động – phải load TRƯỚC app.js để APP_CONFIG.CURRENT_WEEK được cập nhật -->
+  <script src="js/school-calendar.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Khởi động module tính tuần học ngay sau khi DOM sẵn sàng -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SchoolCalendar) {
+        window.SchoolCalendar.init();
+      }
+    });
+  </script>
 
 </body>
 </html>
