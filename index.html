@@ -9,11 +9,10 @@
   <meta name="description" content="Hệ thống Quản lý và Kiểm tra Kế hoạch bài dạy (KHBD / Giáo án) kết nối tự động Google Drive dành cho trường THCS Tây Phú">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 
-  <!-- Google Fonts: Inter & Outfit & Material Symbols -->
+  <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
   <!-- Firebase Realtime Database SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -149,236 +148,79 @@
       <aside class="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-16 z-30">
         
         <!-- CARD MENU CHÍNH -->
-        <!-- CARD MENU CHÍNH: CÂY PHÂN CẤP HIỆN ĐẠI (TREE-VIEW HIERARCHY) -->
-        <div class="sidebar-tree-container">
-          
-          <!-- Brand Logo Trường THCS Tây Phú -->
-          <div class="school-nav-brand">
-            <img src="assets/images/logo.png" alt="Logo THCS Tây Phú" class="school-nav-logo" onerror="this.src='../CHUNHIEM 9A4/assets/images/logo.png';">
-            <div>
-              <div class="text-[12.5px] font-extrabold text-slate-900 leading-tight font-heading">THCS TÂY PHÚ</div>
-              <div class="inline-flex items-center gap-1 text-[10.5px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 mt-0.5">
-                <span>Tổ KHTN - Công Nghệ</span>
-              </div>
-            </div>
+        <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-3.5 space-y-3">
+          <div class="px-2 py-1 flex items-center justify-between border-b border-slate-100 pb-2">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Danh Mục Điều Hướng</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200/60">Tổ KHTN-CN</span>
           </div>
 
-          <!-- Nút Nộp KHBD Nhanh -->
-          <button onclick="window.UITeacher.openUploadModal()" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-blue-500/25 active:scale-95 transition-all mb-3 cursor-pointer">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>+ Nộp Kế hoạch bài dạy mới</span>
-          </button>
+          <!-- Vertical Navigation Buttons -->
+          <nav class="space-y-1.5" id="sidebar-main-nav">
+            <!-- Nút Nộp KHBD Nhanh -->
+            <button onclick="window.UITeacher.openUploadModal()" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-blue-500/25 active:scale-95 transition-all mb-2 cursor-pointer">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span>+ Nộp Kế hoạch bài dạy mới</span>
+            </button>
 
-          <!-- Danh Mục Điều Hướng Phân Cấp -->
-          <nav class="space-y-1" id="sidebar-main-nav">
+            <!-- Tab 1: Giáo viên -->
+            <button id="nav-tab-teacher" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left bg-blue-600 text-white shadow-md shadow-blue-500/20 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">👨‍🏫</span>
+                <div>
+                  <div class="leading-tight">Kế hoạch của tôi</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-blue-100 mt-0.5">Nộp & quản lý giáo án</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-white/80">❯</span>
+            </button>
 
-            <!-- NHÓM 1: KẾ HOẠCH GIÁO DỤC (CV 5512) -->
-            <div class="nav-group-item is-open">
-              <button type="button" class="nav-group-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="nav-group-title">
-                  <span class="group-badge-icon group-badge-emerald">📗</span>
-                  <span>Kế hoạch Giáo dục (CV 5512)</span>
-                </span>
-                <span class="group-arrow-icon">▼</span>
-              </button>
-              <ul class="nav-group-list">
-                
-                <!-- Mục 1: Kế hoạch của tôi (Cổng GV) -->
-                <li class="nav-sub-item">
-                  <button id="nav-tab-teacher" class="nav-sub-btn active">
-                    <div class="flex items-center gap-2">
-                      <span>📄</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Kế hoạch của tôi</div>
-                        <div class="tab-sublabel text-[10px] text-blue-100">Nộp & quản lý giáo án</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge bg-white/20 text-white">Nộp mới</span>
-                  </button>
-                </li>
+            <!-- Tab 2: Tổ trưởng / Tổ phó -->
+            <button id="nav-tab-reviewer" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">📋</span>
+                <div>
+                  <div class="leading-tight">Kiểm tra & Duyệt</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Tổ trưởng & Tổ phó</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
 
-                <!-- Mục 2: Mượn thiết bị giáo dục -->
-                <li class="nav-sub-item">
-                  <button id="nav-tab-equipment" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>🔬</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Mượn thiết bị dạy học</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">315+ TB KHTN & CN</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">315+ TB</span>
-                  </button>
-                </li>
+            <!-- Tab 3: Thiết bị dạy học -->
+            <button id="nav-tab-equipment" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">🔬</span>
+                <div>
+                  <div class="leading-tight">Thiết bị Dạy học</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">315+ TB KHTN & CN 6-9</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
 
-                <!-- Mục 3: Kế hoạch Giáo dục Tổ (Liên kết sang Trợ lý Tổ Trưởng) -->
-                <li class="nav-sub-item">
-                  <a href="../to-chuyen-mon/index.html#tab-ke-hoach" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>📅</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Kế hoạch Tổ (PL1, PL2)</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Xuất file Word A4 chuẩn</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">Mở ↗</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
+            <!-- Tab 4: Báo cáo & Quản trị -->
+            <button id="nav-tab-admin" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">📊</span>
+                <div>
+                  <div class="leading-tight">Báo cáo & Quản trị</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Thống kê toàn trường & GV</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
 
-            <!-- NHÓM 2: KIỂM TRA & DUYỆT (CV 5512) -->
-            <div class="nav-group-item is-open">
-              <button type="button" class="nav-group-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="nav-group-title">
-                  <span class="group-badge-icon group-badge-amber">📙</span>
-                  <span>Kiểm tra & Phê duyệt</span>
-                </span>
-                <span class="group-arrow-icon">▼</span>
-              </button>
-              <ul class="nav-group-list">
-                <!-- Mục Duyệt KHBD của Tổ trưởng -->
-                <li class="nav-sub-item">
-                  <button id="nav-tab-reviewer" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>📋</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Kiểm tra & Duyệt KHBD</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Tổ trưởng & Tổ phó</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">5 Tiêu chí</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <!-- NHÓM 3: BÁO CÁO & QUẢN TRỊ -->
-            <div class="nav-group-item is-open">
-              <button type="button" class="nav-group-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="nav-group-title">
-                  <span class="group-badge-icon group-badge-blue">🔷</span>
-                  <span>Tổng quan & Báo cáo</span>
-                </span>
-                <span class="group-arrow-icon">▼</span>
-              </button>
-              <ul class="nav-group-list">
-                <!-- Mục Báo cáo & Quản trị -->
-                <li class="nav-sub-item">
-                  <button id="nav-tab-admin" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>📊</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Báo cáo & Thống kê</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Tiến độ nộp toàn trường</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">BGH</span>
-                  </button>
-                </li>
-
-                <!-- Mục Cài đặt Google Drive (chỉ Admin) -->
-                <li class="nav-sub-item">
-                  <button id="nav-tab-settings" style="display: none;" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>⚙️</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Cấu hình Google Drive</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Quản trị viên hệ thống</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">Admin</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <!-- NHÓM 4: SINH HOẠT CHUYÊN MÔN & HỒ SƠ TỔ -->
-            <div class="nav-group-item">
-              <button type="button" class="nav-group-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="nav-group-title">
-                  <span class="group-badge-icon group-badge-purple">🟪</span>
-                  <span>Sinh hoạt Chuyên môn</span>
-                </span>
-                <span class="group-arrow-icon">▼</span>
-              </button>
-              <ul class="nav-group-list">
-                <li class="nav-sub-item">
-                  <a href="../to-chuyen-mon/index.html#tab-hop-theo-tuan" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>📆</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Họp Tổ 2 tuần/lần</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">18 Biên bản họp chuẩn</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">Kỳ 1 ↗</span>
-                  </a>
-                </li>
-                <li class="nav-sub-item">
-                  <a href="../to-chuyen-mon/index.html#tab-hop-ky-2" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>🔬</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Sinh hoạt NCBH 4 bước</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Dạy thể nghiệm & Phân tích</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">Kỳ 2 ↗</span>
-                  </a>
-                </li>
-                <li class="nav-sub-item">
-                  <a href="../to-chuyen-mon/index.html#tab-ho-so-thuc-te" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>📂</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Kho 36 Tệp Văn Bản Mẫu</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Tải tệp .docx thực tế</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">36 tệp ↗</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <!-- NHÓM 5: TIỆN ÍCH SƯ PHẠM & THIẾT BỊ TOÀN TRƯỜNG -->
-            <div class="nav-group-item">
-              <button type="button" class="nav-group-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="nav-group-title">
-                  <span class="group-badge-icon group-badge-cyan">💎</span>
-                  <span>Tiện ích & Mở rộng</span>
-                </span>
-                <span class="group-arrow-icon">▼</span>
-              </button>
-              <ul class="nav-group-list">
-                <li class="nav-sub-item">
-                  <a href="../to-chuyen-mon/index.html#tab-chat-ai" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>🤖</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Trợ lý AI Tổ Trưởng</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Hỏi đáp quy chế & góp ý</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">AI ↗</span>
-                  </a>
-                </li>
-                <li class="nav-sub-item">
-                  <a href="../thiet-bi/index.html" target="_blank" class="nav-sub-btn">
-                    <div class="flex items-center gap-2">
-                      <span>🏫</span>
-                      <div>
-                        <div class="leading-tight font-semibold">Quản lý Thiết bị Trường</div>
-                        <div class="tab-sublabel text-[10px] text-slate-400">Hệ thống kho 62 giáo viên</div>
-                      </div>
-                    </div>
-                    <span class="nav-sub-badge">Kho TB ↗</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-
+            <!-- Tab 5: Cài đặt Google Drive (chỉ Admin) -->
+            <button id="nav-tab-settings" style="display: none;" class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left text-slate-700 hover:bg-slate-100 group">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base group-hover:scale-110 transition-transform">⚙️</span>
+                <div>
+                  <div class="leading-tight">Cấu hình Google Drive</div>
+                  <div class="tab-sublabel text-[10px] font-normal text-slate-400 mt-0.5">Quản trị viên hệ thống</div>
+                </div>
+              </div>
+              <span class="tab-arrow text-xs text-slate-400">❯</span>
+            </button>
           </nav>
         </div>
 
@@ -513,441 +355,131 @@
     <!-- ================= VIEW 2: REVIEWER PORTAL (TỔ TRƯỞNG & TỔ PHÓ) ================= -->
     <section id="view-reviewer" class="hidden space-y-6">
       
-      <!-- Top Banner / Operational Command Deck -->
-      <div class="relative overflow-hidden rounded-2xl glass-panel p-5 sm:p-6 shadow-sm border border-slate-200/90 dashboard-hero-glow">
-        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div class="space-y-2 max-w-3xl">
-            <!-- Badges Quy Chuẩn Pháp Lý -->
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-900 text-white font-mono text-[11px] font-bold shadow-xs">
-                <span class="material-symbols-outlined text-xs">new_releases</span>TT 15/2025/TT-BGDĐT (Mới ban hành)
-              </span>
-              <span class="text-slate-300">•</span>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 font-mono text-[11px] font-medium border border-blue-200/60">
-                <span class="material-symbols-outlined text-xs">gavel</span>TT 32/2020 (Điều 14)
-              </span>
-              <span class="text-slate-300">•</span>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 font-mono text-[11px] font-medium border border-blue-200/60">
-                <span class="material-symbols-outlined text-xs">description</span>CV 5512/BGDĐT
-              </span>
-              <span class="text-slate-300">•</span>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 font-mono text-[11px] font-medium border border-blue-200/60">
-                <span class="material-symbols-outlined text-xs">verified</span>TT 22/2021 (KTĐG)
-              </span>
-              <span class="ml-1 inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
-                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span id="reviewer-cmd-academic-info">Năm học 2026-2027</span>
-              </span>
-            </div>
-
-            <!-- Tiêu đề và Mô tả hệ thống -->
-            <h2 class="text-xl sm:text-2xl font-bold font-heading text-slate-900 leading-tight">
-              Hệ thống Quản trị Hoạt động Chuyên môn — <span id="reviewer-dept-title" class="text-blue-700">Tổ KHTN - Công nghệ</span>
-            </h2>
-            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Trường THCS Tây Phú • Chuẩn hóa chức danh nghề nghiệp & nhiệm vụ giảng dạy theo <strong>Thông tư 15/2025/TT-BGDĐT</strong> • Thẩm định KHBD theo <strong>CV 5512</strong> • Người điều hành: <strong id="reviewer-head-name" class="text-slate-800">Thầy Võ Văn Hà (Tổ trưởng)</strong>
-            </p>
+      <!-- Reviewer Header -->
+      <div class="glass-panel p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold mb-1.5">
+            <span>🛡️ Cổng Kiểm tra & Ký duyệt Chuyên môn (Tổ trưởng & Tổ phó)</span>
           </div>
-
-          <!-- Quick Action Buttons -->
-          <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <!-- Nút Ký duyệt việc gấp -->
-            <button onclick="window.UIReviewer.scrollToPending()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer">
-              <span class="material-symbols-outlined text-base">post_add</span>
-              <span>+ Ký duyệt việc gấp</span>
-            </button>
-            <!-- Nút AI Duyệt hàng loạt (ID cũ bảo toàn) -->
-            <button id="btn-batch-ai-review" onclick="window.UIReviewer.openAiBatchModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer">
-              <span class="material-symbols-outlined text-base">smart_toy</span>
-              <span>AI Duyệt hàng loạt</span>
-              <span id="badge-pending-count" class="ml-1 px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px] font-mono font-bold">0</span>
-            </button>
-            <!-- Nút Lịch sinh hoạt NCBH -->
-            <button onclick="window.UIReviewer.scrollToSection('reviewer-ncbh-schedule-section')" class="inline-flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs border border-slate-200 transition-all cursor-pointer">
-              <span class="material-symbols-outlined text-base">calendar_month</span>
-              <span>Lịch sinh hoạt tổ</span>
-            </button>
-            <!-- Nút Biểu mẫu 5512 -->
-            <button onclick="window.UIReviewer.scrollToSection('reviewer-legal-templates-section')" class="inline-flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs border border-slate-200 transition-all cursor-pointer">
-              <span class="material-symbols-outlined text-base">folder_open</span>
-              <span>Biểu mẫu 5512</span>
-            </button>
-            <!-- Nút Xuất Excel -->
-            <button onclick="window.UIReviewer.exportToExcel()" class="inline-flex items-center gap-1.5 px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xs border border-emerald-200 transition-all cursor-pointer" title="Xuất báo cáo tổng hợp danh sách kế hoạch bài dạy ra file Excel">
-              <span class="material-symbols-outlined text-base">ios_share</span>
-              <span>Xuất Excel</span>
-            </button>
-          </div>
+          <h2 class="text-xl font-bold font-heading text-slate-900">Kiểm tra Kế hoạch Bài dạy Tổ bộ môn</h2>
+          <p class="text-xs text-slate-500">Đánh giá theo chuẩn Công văn 5512/BGDĐT và Ký duyệt điện tử trực tiếp</p>
         </div>
-      </div>
-
-      <!-- Metric / KPI Cards (4 columns) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-        <!-- Card 1: Chức danh nghề nghiệp TT 15/2025 -->
-        <div class="glass-card p-4 flex flex-col justify-between border-slate-200/90">
-          <div class="flex items-start justify-between">
-            <div class="space-y-0.5">
-              <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Đội ngũ & Chức danh (TT 15/2025)</p>
-              <div class="flex items-baseline gap-1.5">
-                <span id="reviewer-kpi-teachers-count" class="text-2xl font-bold text-slate-900 font-heading">12</span>
-                <span class="text-xs text-slate-500 font-medium">Giáo viên trong tổ</span>
-              </div>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <span class="material-symbols-outlined text-xl">badge</span>
-            </div>
-          </div>
-          <div class="mt-3 pt-2 bg-slate-50 rounded-lg p-2 space-y-1 text-xs">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-500">Rà soát chuẩn TT 15/2025:</span>
-              <span class="font-bold text-emerald-600">100% Đủ tiêu chuẩn</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-1 text-[10px]">
-              <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">03 Hạng I (GVCC)</span>
-              <span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">06 Hạng II</span>
-              <span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">03 Hạng III</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 2: Tiến độ KHBD CV 5512 -->
-        <div class="glass-card p-4 flex flex-col justify-between border-slate-200/90">
-          <div class="flex items-start justify-between">
-            <div class="space-y-0.5">
-              <p id="reviewer-kpi-week-title" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tiến độ KHBD (CV 5512)</p>
-              <div class="flex items-baseline gap-1.5">
-                <span id="reviewer-kpi-week-pct" class="text-2xl font-bold text-blue-600 font-heading">100%</span>
-                <span class="text-xs text-emerald-600 font-semibold">Đã ký duyệt</span>
-              </div>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <span class="material-symbols-outlined text-xl">menu_book</span>
-            </div>
-          </div>
-          <div class="mt-3 pt-2 bg-slate-50 rounded-lg p-2 space-y-1.5 text-xs">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-500">Đã phê duyệt:</span>
-              <span id="reviewer-kpi-week-fraction" class="font-bold text-slate-800">0 / 0 Giáo án</span>
-              <!-- ID cũ bảo toàn để không lỗi code -->
-              <span id="reviewer-kpi-approved" class="hidden">0</span>
-            </div>
-            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-              <div id="reviewer-kpi-week-bar" class="bg-gradient-to-r from-blue-600 to-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 100%"></div>
-            </div>
-            <p class="text-[10px] text-slate-500">Đạt chuẩn 5 tiêu chí thẩm định CV 5512</p>
-          </div>
-        </div>
-
-        <!-- Card 3: Sinh hoạt NCBH & Chuyên đề (Điều 14 TT 32) -->
-        <div class="glass-card p-4 flex flex-col justify-between border-slate-200/90">
-          <div class="flex items-start justify-between">
-            <div class="space-y-0.5">
-              <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sinh hoạt NCBH & Chuyên đề</p>
-              <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-bold text-slate-900 font-heading">2 tuần / 1 lần</span>
-              </div>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <span class="material-symbols-outlined text-xl">groups</span>
-            </div>
-          </div>
-          <div class="mt-3 pt-2 bg-slate-50 rounded-lg p-2 space-y-1 text-xs">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-500">Quy chuẩn tổ chức:</span>
-              <span class="font-bold text-purple-700">Điều 14 TT 32/2020</span>
-            </div>
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-500">Tổng giáo án trong tổ:</span>
-              <span id="reviewer-kpi-total" class="font-bold text-slate-800">0 bài</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 4: Action Queue / Cần xử lý ngay -->
-        <div class="glass-card p-4 flex flex-col justify-between border-slate-200/90">
-          <div class="flex items-start justify-between">
-            <div class="space-y-0.5">
-              <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Hàng đợi Chờ phê duyệt</p>
-              <div class="flex items-baseline gap-1.5">
-                <span id="reviewer-kpi-pending" class="text-2xl font-bold text-amber-600 font-heading">0</span>
-                <span class="text-xs text-slate-500 font-medium">bài chờ duyệt</span>
-                <span id="reviewer-kpi-revision" class="hidden">0</span>
-              </div>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <span class="material-symbols-outlined text-xl">pending_actions</span>
-            </div>
-          </div>
-          <div class="mt-3 pt-2 bg-slate-50 rounded-lg p-2 space-y-1 text-xs">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-500">Trạng thái xử lý:</span>
-              <span id="reviewer-kpi-action-count" class="font-bold text-amber-600">0 bài chờ</span>
-            </div>
-            <button onclick="window.UIReviewer.scrollToPending()" class="w-full text-center py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] transition cursor-pointer">
-              Xử lý các bài chờ duyệt ➔
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Main Operational Grid (65% / 35%) -->
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         
-        <!-- Left Column: Bộ lọc & Bảng Giáo án (col-span-8) -->
-        <div class="xl:col-span-8 space-y-4">
-          
-          <!-- Filter Controls Bar (Đầy đủ 35 tuần) -->
-          <div class="glass-panel p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 shadow-xs">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Giáo viên:</label>
-              <select id="reviewer-filter-teacher" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="ALL">-- Tất cả giáo viên --</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tuần dạy (Đầy đủ 35 tuần):</label>
-              <select id="reviewer-filter-week" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="ALL">-- Tất cả các tuần (1 - 35) --</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Trạng thái duyệt:</label>
-              <select id="reviewer-filter-status" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="ALL">-- Tất cả trạng thái --</option>
-                <option value="CHO_DUYET">⏳ Chờ duyệt</option>
-                <option value="DA_DUYET">✅ Đã phê duyệt</option>
-                <option value="CAN_SUA">⚠️ Yêu cầu sửa</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tìm kiếm bài:</label>
-              <input type="text" id="reviewer-search-input" oninput="window.UIReviewer.applyFiltersAndRenderTable()" placeholder="Nhập tên bài, môn học..." class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <div class="text-xs text-slate-500 font-medium">Chờ duyệt trong tổ:</div>
+            <div id="reviewer-kpi-pending" class="text-xl font-extrabold text-amber-600 font-heading">0 bài</div>
           </div>
-
-          <!-- Floating Batch Actions Bar for Reviewer -->
-          <div id="reviewer-batch-bar" class="hidden p-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
-            <div class="flex items-center gap-3">
-              <span class="w-7 h-7 rounded-lg bg-indigo-500/40 text-indigo-200 flex items-center justify-center font-bold text-xs" id="reviewer-selected-count">0</span>
-              <div>
-                <div class="text-xs font-bold text-white">Kế hoạch bài dạy đã chọn</div>
-                <div class="text-[10px] text-slate-300">Thao tác phê duyệt hoặc thẩm định cùng lúc</div>
-              </div>
+          <button id="btn-batch-ai-review" onclick="window.UIReviewer.openAiBatchModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition flex items-center gap-2">
+            <span class="text-lg">🤖</span>
+            <div class="text-left">
+              <div class="leading-none font-extrabold">Trợ lý AI Duyệt hàng loạt</div>
+              <div class="text-[10px] text-white/80 font-normal mt-0.5">Thẩm định chuẩn CV 5512</div>
             </div>
-            <div class="flex items-center gap-2">
-              <button onclick="window.UIReviewer.openAiBatchModalForSelected()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
-                <span>🤖 AI Thẩm định các bài đã chọn</span>
-              </button>
-              <button onclick="window.UIReviewer.quickApproveSelected()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
-                <span>✅ Phê duyệt các bài đã chọn</span>
-              </button>
-              <button onclick="window.UIReviewer.clearSelectedPlans()" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold transition cursor-pointer">
-                Bỏ chọn
-              </button>
-            </div>
-          </div>
-
-          <!-- Reviewer Table -->
-          <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-100/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                    <th class="px-3 py-3 text-center w-10">
-                      <input type="checkbox" id="reviewer-select-all-cb" onchange="window.UIReviewer.toggleSelectAll(this.checked)" class="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600" title="Chọn tất cả bài đang hiển thị">
-                    </th>
-                    <th class="px-3 py-3 text-center">Tuần</th>
-                    <th class="px-4 py-3">Giáo viên</th>
-                    <th class="px-4 py-3">Tên bài / Môn / Lớp</th>
-                    <th class="px-4 py-3">Ngày nộp</th>
-                    <th class="px-4 py-3">Trạng thái</th>
-                    <th class="px-4 py-3">Điểm CV 5512</th>
-                    <th class="px-4 py-3 text-right">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody id="reviewer-plans-tbody" class="divide-y divide-slate-100 text-sm">
-                  <!-- Rendered via JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
+            <span id="badge-pending-count" class="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-mono font-bold">0</span>
+          </button>
         </div>
-
-        <!-- Right Column: Việc cần xử lý ngay & Lịch sinh hoạt tổ (col-span-4) -->
-        <div class="xl:col-span-4 space-y-4">
-          
-          <!-- Widget 1: Action Queue / Việc cần xử lý ngay -->
-          <div class="glass-panel rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-rose-500 text-lg">priority_high</span>
-                <h3 class="font-bold text-slate-800 text-sm font-heading">Việc cần xử lý ngay</h3>
-              </div>
-              <span id="reviewer-action-queue-badge" class="h-6 px-2.5 rounded-full bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center">
-                0 mục
-              </span>
-            </div>
-            
-            <!-- Danh sách bài chờ duyệt nhanh -->
-            <div id="reviewer-action-queue-list" class="space-y-2.5">
-              <!-- Rendered via JS -->
-            </div>
-          </div>
-
-          <!-- Widget 2: Lịch Sinh hoạt Chuyên môn (Điều lệ TT 32) -->
-          <div id="reviewer-ncbh-schedule-section" class="glass-panel rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-blue-600 text-lg">calendar_month</span>
-                <h3 class="font-bold text-slate-800 text-sm font-heading">Lịch Sinh hoạt Chuyên môn</h3>
-              </div>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200/50">Khoản 2 Điều 14 TT 32</span>
-            </div>
-
-            <div class="space-y-3 text-xs">
-              <!-- Meeting 1: NCBH -->
-              <div class="p-2.5 rounded-xl bg-slate-50 border-l-4 border-blue-600 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-blue-900 uppercase text-[10px]">Sinh hoạt theo NCBH (2 tuần/lần)</span>
-                  <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-mono text-[10px] font-semibold">Thứ Năm, 14:00</span>
-                </div>
-                <p class="font-semibold text-slate-800">Chủ đề STEM KHTN & Phân tích tiến trình bài dạy (CV 1315)</p>
-                <p class="text-[11px] text-slate-500">Địa điểm: Phòng Đa năng • Toàn thể giáo viên tổ tham gia</p>
-              </div>
-
-              <!-- Meeting 2: Đề xuất SGK & KTĐK -->
-              <div class="p-2.5 rounded-xl bg-slate-50 border-l-4 border-indigo-500 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-indigo-900 uppercase text-[10px]">Ma trận & Đề kiểm tra định kỳ</span>
-                  <span class="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-mono text-[10px] font-semibold">Theo Kế hoạch</span>
-                </div>
-                <p class="font-semibold text-slate-800">Thẩm định ngân hàng câu hỏi & ma trận đề kiểm tra (TT 22/2021)</p>
-                <p class="text-[11px] text-slate-500">Chủ trì: Tổ trưởng & Tổ phó chuyên môn</p>
-              </div>
-
-              <!-- Meeting 3: Hồ sơ CDNN TT 15/2025 -->
-              <div class="p-2.5 rounded-xl bg-slate-50 border-l-4 border-purple-500 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="font-bold text-purple-900 uppercase text-[10px]">Chuẩn Chức danh TT 15/2025</span>
-                  <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-[10px] font-semibold">Mới 2025</span>
-                </div>
-                <p class="font-semibold text-slate-800">Hướng dẫn hoàn thiện hồ sơ minh chứng tiêu chuẩn Hạng I, II, III</p>
-                <p class="text-[11px] text-slate-500">Phổ biến tiêu chuẩn chức danh nghề nghiệp mới</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
       </div>
 
-      <!-- Kho Văn bản Pháp lý & Biểu mẫu Chuẩn hóa Bộ GD&ĐT (Quick Downloads) -->
-      <div id="reviewer-legal-templates-section" class="glass-panel rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
+      <!-- Department KPIs -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Tổng giáo án trong tổ:</span>
+          <div id="reviewer-kpi-total" class="text-xl font-bold text-slate-800 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Đã phê duyệt:</span>
+          <div id="reviewer-kpi-approved" class="text-xl font-bold text-emerald-600 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200">
+          <span class="text-slate-500 text-xs">Yêu cầu chỉnh sửa:</span>
+          <div id="reviewer-kpi-revision" class="text-xl font-bold text-rose-600 font-heading">0</div>
+        </div>
+        <div class="glass-card p-3.5 border-slate-200 flex items-center justify-between">
           <div>
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-blue-600 text-xl">folder_zip</span>
-              <h3 class="text-base font-bold font-heading text-slate-900">Kho Văn bản Pháp lý & Biểu mẫu Chuẩn hóa Bộ GD&ĐT</h3>
-            </div>
-            <p class="text-xs text-slate-500 mt-0.5">Tài liệu phục vụ công tác xây dựng Kế hoạch Giáo dục nhà trường và Kế hoạch bài dạy (KHBD)</p>
+            <span class="text-slate-500 text-xs">Chuẩn đánh giá:</span>
+            <div class="text-xs font-bold text-blue-600 font-heading mt-0.5">CV 5512 (5 Tiêu chí)</div>
           </div>
-          <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">Cập nhật theo quy định hiện hành</span>
+          <span class="text-2xl">📋</span>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar (Đầy đủ 35 tuần) -->
+      <div class="glass-panel p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Giáo viên:</label>
+          <select id="reviewer-filter-teacher" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả giáo viên --</option>
+          </select>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          <!-- Mẫu 1: TT 15/2025 -->
-          <div class="p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/90 transition-all flex flex-col justify-between group">
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="material-symbols-outlined text-blue-600 text-2xl group-hover:scale-110 transition-transform">gavel</span>
-                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold">MỚI PDF</span>
-              </div>
-              <p class="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">TT 15/2025/TT-BGDĐT</p>
-              <p class="text-[11px] text-slate-500 line-clamp-2">Tiêu chuẩn CDNN, bổ nhiệm & xếp lương GV THCS Hạng I, II, III</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <button onclick="window.UIReviewer.openLegalDocModal('TT15')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                <span>Xem tóm tắt</span>
-                <span class="material-symbols-outlined text-sm">visibility</span>
-              </button>
-            </div>
-          </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tuần dạy (Đầy đủ 35 tuần):</label>
+          <select id="reviewer-filter-week" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả các tuần (1 - 35) --</option>
+          </select>
+        </div>
 
-          <!-- Mẫu 2: Phụ lục I - CV 5512 -->
-          <div class="p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/90 transition-all flex flex-col justify-between group">
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="material-symbols-outlined text-blue-600 text-2xl group-hover:scale-110 transition-transform">article</span>
-                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">DOCX</span>
-              </div>
-              <p class="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">Phụ lục I - CV 5512</p>
-              <p class="text-[11px] text-slate-500 line-clamp-2">Kế hoạch dạy học môn học của tổ chuyên môn theo khối lớp</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <button onclick="window.UIReviewer.openLegalDocModal('PL1')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                <span>Xem mẫu chuẩn</span>
-                <span class="material-symbols-outlined text-sm">visibility</span>
-              </button>
-            </div>
-          </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Trạng thái duyệt:</label>
+          <select id="reviewer-filter-status" onchange="window.UIReviewer.applyFiltersAndRenderTable()" class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="ALL">-- Tất cả trạng thái --</option>
+            <option value="CHO_DUYET">⏳ Chờ duyệt</option>
+            <option value="DA_DUYET">✅ Đã phê duyệt</option>
+            <option value="CAN_SUA">⚠️ Yêu cầu sửa</option>
+          </select>
+        </div>
 
-          <!-- Mẫu 3: Phụ lục II - CV 5512 -->
-          <div class="p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/90 transition-all flex flex-col justify-between group">
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="material-symbols-outlined text-blue-600 text-2xl group-hover:scale-110 transition-transform">event_note</span>
-                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">DOCX</span>
-              </div>
-              <p class="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">Phụ lục II - CV 5512</p>
-              <p class="text-[11px] text-slate-500 line-clamp-2">Kế hoạch tổ chức các hoạt động giáo dục của tổ chuyên môn</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <button onclick="window.UIReviewer.openLegalDocModal('PL2')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                <span>Xem mẫu chuẩn</span>
-                <span class="material-symbols-outlined text-sm">visibility</span>
-              </button>
-            </div>
-          </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tìm kiếm bài:</label>
+          <input type="text" id="reviewer-search-input" oninput="window.UIReviewer.applyFiltersAndRenderTable()" placeholder="Nhập tên bài, môn học..." class="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
 
-          <!-- Mẫu 4: Phụ lục IV - CV 5512 -->
-          <div class="p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/90 transition-all flex flex-col justify-between group">
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="material-symbols-outlined text-blue-600 text-2xl group-hover:scale-110 transition-transform">task</span>
-                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">DOCX MẪU</span>
-              </div>
-              <p class="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">Phụ lục IV - CV 5512</p>
-              <p class="text-[11px] text-slate-500 line-clamp-2">Khung Kế hoạch bài dạy chuẩn (KHBD 4 hoạt động)</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <button onclick="window.UIReviewer.openLegalDocModal('PL4')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                <span>Xem khung mẫu</span>
-                <span class="material-symbols-outlined text-sm">visibility</span>
-              </button>
-            </div>
+      <!-- Floating Batch Actions Bar for Reviewer -->
+      <div id="reviewer-batch-bar" class="hidden p-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+        <div class="flex items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-indigo-500/40 text-indigo-200 flex items-center justify-center font-bold text-xs" id="reviewer-selected-count">0</span>
+          <div>
+            <div class="text-xs font-bold text-white">Kế hoạch bài dạy đã chọn</div>
+            <div class="text-[10px] text-slate-300">Thao tác phê duyệt hoặc thẩm định cùng lúc</div>
           </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.UIReviewer.openAiBatchModalForSelected()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+            <span>🤖 AI Thẩm định các bài đã chọn</span>
+          </button>
+          <button onclick="window.UIReviewer.quickApproveSelected()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+            <span>✅ Phê duyệt các bài đã chọn</span>
+          </button>
+          <button onclick="window.UIReviewer.clearSelectedPlans()" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold transition">
+            Bỏ chọn
+          </button>
+        </div>
+      </div>
 
-          <!-- Mẫu 5: CV 1315/BGDĐT -->
-          <div class="p-3.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/90 transition-all flex flex-col justify-between group">
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="material-symbols-outlined text-blue-600 text-2xl group-hover:scale-110 transition-transform">school</span>
-                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold">HƯỚNG DẪN</span>
-              </div>
-              <p class="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">CV 1315/BGDĐT</p>
-              <p class="text-[11px] text-slate-500 line-clamp-2">Phiếu phân tích bài học theo sinh hoạt chuyên môn NCBH</p>
-            </div>
-            <div class="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
-              <button onclick="window.UIReviewer.openLegalDocModal('CV1315')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                <span>Xem tiêu chí</span>
-                <span class="material-symbols-outlined text-sm">visibility</span>
-              </button>
-            </div>
-          </div>
+      <!-- Reviewer Table -->
+      <div class="glass-panel rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th class="px-3 py-3 text-center w-10">
+                  <input type="checkbox" id="reviewer-select-all-cb" onchange="window.UIReviewer.toggleSelectAll(this.checked)" class="w-4 h-4 rounded text-blue-600 cursor-pointer accent-blue-600" title="Chọn tất cả bài đang hiển thị">
+                </th>
+                <th class="px-3 py-3 text-center">Tuần</th>
+                <th class="px-4 py-3">Giáo viên</th>
+                <th class="px-4 py-3">Tên bài / Môn / Lớp</th>
+                <th class="px-4 py-3">Ngày nộp</th>
+                <th class="px-4 py-3">Trạng thái</th>
+                <th class="px-4 py-3">Điểm CV 5512</th>
+                <th class="px-4 py-3 text-right">Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="reviewer-plans-tbody" class="divide-y divide-slate-100 text-sm">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -1742,7 +1274,7 @@
           <!-- ĐIỀU CHỈNH Ô TUẦN DẠY HỖ TRỢ NHẬP ĐA TUẦN (VD: 1, 2 HOẶC 2, 3) -->
           <div>
             <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tuần dạy <span class="text-rose-500">*</span></label>
-            <input type="text" id="upload-tuan" list="list-tuan-suggestions" value="5" placeholder="VD: 1, 2 hoặc 2, 3" required class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono">
+            <input type="text" id="upload-tuan" list="list-tuan-suggestions" value="3" placeholder="VD: 1, 2 hoặc 2, 3" required class="w-full px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono">
             <datalist id="list-tuan-suggestions">
               <option value="1">Tuần 1</option>
               <option value="2">Tuần 2</option>
@@ -2791,39 +2323,10 @@
 
     <!-- Tỉ lệ trượt -->
     <span id="hscroll-percent" class="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-1 rounded border border-teal-200 hidden md:inline whitespace-nowrap">0%</span>
-  <!-- ================= MODAL XEM VĂN BẢN PHÁP LÝ & BIỂU MẪU CHUẨN ================= -->
-  <div id="modal-legal-doc" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
-    <div class="modal-panel glass-panel w-full max-w-3xl rounded-2xl shadow-2xl border border-white/60 overflow-hidden flex flex-col max-h-[90vh]">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-        <div class="flex items-center gap-2.5">
-          <span id="modal-legal-doc-icon" class="material-symbols-outlined text-blue-600 text-2xl">description</span>
-          <div>
-            <h3 id="modal-legal-doc-title" class="text-base font-bold font-heading text-slate-900">Văn bản pháp lý</h3>
-            <p id="modal-legal-doc-sub" class="text-xs text-slate-500">Quy chuẩn chuyên môn của Bộ GD&ĐT</p>
-          </div>
-        </div>
-        <button onclick="window.UIReviewer.closeLegalDocModal()" class="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 text-sm font-bold shadow-sm transition cursor-pointer">
-          ✕
-        </button>
-      </div>
-
-      <div id="modal-legal-doc-body" class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-700 leading-relaxed">
-        <!-- Rendered via JS -->
-      </div>
-
-      <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-        <span class="text-[11px] text-slate-500 italic">Áp dụng chính thức cho các cấp THCS</span>
-        <button onclick="window.UIReviewer.closeLegalDocModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition cursor-pointer">
-          Đóng cửa sổ
-        </button>
-      </div>
-    </div>
   </div>
 
   <!-- ================= SCRIPTS ================= -->
   <script src="js/config.js"></script>
-  <!-- Lịch tuần học tự động – đồng bộ tuần học thực tế ngay sau config -->
-  <script src="js/school-calendar.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/drive-api.js"></script>
   <script src="js/signature.js"></script>
@@ -2832,6 +2335,8 @@
   <script src="js/ui-teacher.js"></script>
   <script src="js/ui-reviewer.js"></script>
   <script src="js/ui-admin.js"></script>
+  <!-- Lịch tuần học tự động – phải load TRƯỚC app.js để APP_CONFIG.CURRENT_WEEK được cập nhật -->
+  <script src="js/school-calendar.js"></script>
   <script src="js/app.js"></script>
 
   <!-- Khởi động module tính tuần học ngay sau khi DOM sẵn sàng -->

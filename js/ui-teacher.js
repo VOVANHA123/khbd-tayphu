@@ -240,13 +240,9 @@ window.UITeacher = (function() {
   }
 
   // Khởi tạo danh sách 35 tuần cho select
-  function populateWeekSelectOptions(selectElementId, selectedWeek = null) {
+  function populateWeekSelectOptions(selectElementId, selectedWeek = 3) {
     const select = document.getElementById(selectElementId);
     if (!select) return;
-
-    if (selectedWeek === null || selectedWeek === undefined) {
-      selectedWeek = (window.SchoolCalendar ? window.SchoolCalendar.getCurrentWeekInfo().week : (window.APP_CONFIG && window.APP_CONFIG.CURRENT_WEEK ? window.APP_CONFIG.CURRENT_WEEK : 1)) || 1;
-    }
 
     select.innerHTML = window.APP_CONFIG.WEEKS.map(w => `
       <option value="${w.weekNumber}" ${w.weekNumber === parseInt(selectedWeek) ? 'selected' : ''}>
@@ -265,15 +261,13 @@ window.UITeacher = (function() {
     const fileInput = document.getElementById('upload-file-input');
     if (fileInput) fileInput.value = '';
 
-    const currentDefaultWeek = (window.SchoolCalendar ? window.SchoolCalendar.getCurrentWeekInfo().week : (window.APP_CONFIG && window.APP_CONFIG.CURRENT_WEEK ? window.APP_CONFIG.CURRENT_WEEK : 1)) || 1;
-
     // Điền tuần dạy (hỗ trợ cả dạng số đơn hoặc chuỗi '1, 2', '2, 3')
     const tuanInput = document.getElementById('upload-tuan');
     if (tuanInput) {
       if (tuanInput.tagName === 'SELECT') {
-        populateWeekSelectOptions('upload-tuan', currentDefaultWeek);
+        populateWeekSelectOptions('upload-tuan', 3);
       } else {
-        tuanInput.value = String(currentDefaultWeek);
+        tuanInput.value = '3';
       }
     }
 
