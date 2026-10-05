@@ -58,21 +58,39 @@ window.SchoolCalendar = (function () {
   ];
 
   // Ngày khai giảng & ngày kết thúc năm học (dùng để xác định trạng thái)
-  const SCHOOL_YEAR_START = new Date('2026-09-07');
-  const SCHOOL_YEAR_END   = new Date('2027-05-23');
+  const SCHOOL_YEAR_START = '2026-09-07';
+  const SCHOOL_YEAR_END   = '2027-05-23';
   const TOTAL_WEEKS = 35;
   const ACADEMIC_YEAR = '2026-2027';
+
+  // -----------------------------------------------------------------------
+  // Helper định dạng YYYY-MM-DD theo giờ địa phương (tránh sai lệch UTC)
+  // -----------------------------------------------------------------------
+  function formatDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function parseLocalDate(str) {
+    if (!str) return null;
+    if (str instanceof Date) return str;
+    const parts = str.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+  }
 
   // -----------------------------------------------------------------------
   // Trả về kết quả tính toán tuần học hiện tại
   // -----------------------------------------------------------------------
   function getCurrentWeekInfo(now = new Date()) {
-    // Cắt giờ, làm tròn về đầu ngày (UTC+7 không ảnh hưởng so sánh nếu dùng hằng số cùng múi giờ)
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStr = formatDateStr(now);
+    const today = parseLocalDate(todayStr);
 
     // Chưa vào năm học
-    if (today < SCHOOL_YEAR_START) {
-      const daysUntil = Math.ceil((SCHOOL_YEAR_START - today) / 86400000);
+    if (todayStr < SCHOOL_YEAR_START) {
+      const startDate = parseLocalDate(SCHOOL_YEAR_START);
+      const daysUntil = Math.ceil((startDate - today) / 86400000);
       return {
         week: 0,
         semester: null,
@@ -87,7 +105,7 @@ window.SchoolCalendar = (function () {
     }
 
     // Sau năm học
-    if (today > SCHOOL_YEAR_END) {
+    if (todayStr > SCHOOL_YEAR_END) {
       return {
         week: TOTAL_WEEKS,
         semester: 'Học kỳ II',
@@ -103,9 +121,7 @@ window.SchoolCalendar = (function () {
 
     // Tìm tuần khớp
     for (const entry of WEEK_TABLE) {
-      const start = new Date(entry.start);
-      const end   = new Date(entry.end);
-      if (today >= start && today <= end) {
+      if (todayStr >= entry.start && todayStr <= entry.end) {
         const progress  = Math.round((entry.week / TOTAL_WEEKS) * 100 * 10) / 10;
         const weeksLeft = TOTAL_WEEKS - entry.week;
         return {
@@ -128,17 +144,16 @@ window.SchoolCalendar = (function () {
     // → tìm tuần trước đó gần nhất
     let prevEntry = null;
     for (let i = WEEK_TABLE.length - 1; i >= 0; i--) {
-      const end = new Date(WEEK_TABLE[i].end);
-      if (today > end) {
+      if (todayStr > WEEK_TABLE[i].end) {
         prevEntry = WEEK_TABLE[i];
         break;
       }
     }
 
     if (prevEntry) {
-      const nextEntry = WEEK_TABLE.find(e => new Date(e.start) > today);
+      const nextEntry = WEEK_TABLE.find(e => e.start > todayStr);
       const daysUntilNext = nextEntry
-        ? Math.ceil((new Date(nextEntry.start) - today) / 86400000)
+        ? Math.ceil((parseLocalDate(nextEntry.start) - today) / 86400000)
         : null;
       const progress  = Math.round((prevEntry.week / TOTAL_WEEKS) * 100 * 10) / 10;
       const weeksLeft = TOTAL_WEEKS - prevEntry.week;
@@ -177,6 +192,8 @@ window.SchoolCalendar = (function () {
   // Cập nhật toàn bộ giao diện widget tiến độ năm học
   // -----------------------------------------------------------------------
   function updateProgressWidget(info) {
+    if (!info) info = getCurrentWeekInfo();
+
     // 1. Widget tuần trong sidebar
     const weekDisplay = document.querySelector('#sidebar-week-display');
     const progressBar = document.querySelector('#sidebar-progress-bar');
@@ -194,11 +211,22 @@ window.SchoolCalendar = (function () {
     const headerWeek = document.getElementById('header-current-week');
     if (headerWeek) headerWeek.textContent = `Tuần ${info.week}`;
 
-    // 3. Cập nhật APP_CONFIG (để các module khác đọc được tuần hiện tại)
+    // 3. Command bar hiển thị thông tin học kỳ & tuần (không gian Tổ trưởng)
+    const cmdAcademicInfo = document.getElementById('reviewer-cmd-academic-info');
+    if (cmdAcademicInfo && info.week > 0) {
+      cmdAcademicInfo.innerText = `${info.semester || 'Học kỳ I'} • Tuần ${info.week}`;
+    }
+
+    // 4. Cập nhật APP_CONFIG (để các module khác đọc được tuần hiện tại)
     if (window.APP_CONFIG) {
       window.APP_CONFIG.CURRENT_WEEK     = info.week;
       window.APP_CONFIG.CURRENT_SEMESTER = info.semester || window.APP_CONFIG.CURRENT_SEMESTER;
     }
+
+    // 5. Phát sự kiện để các view lắng nghe nếu cần cập nhật lại
+    try {
+      window.dispatchEvent(new CustomEvent('school-calendar:updated', { detail: info }));
+    } catch (e) {}
   }
 
   // -----------------------------------------------------------------------
@@ -219,6 +247,15 @@ window.SchoolCalendar = (function () {
       if (!document.hidden) refresh();
     });
   }
+
+  // Tự động gán ngay vào APP_CONFIG khi load file (không cần đợi DOM)
+  try {
+    if (window.APP_CONFIG) {
+      const initialInfo = getCurrentWeekInfo();
+      window.APP_CONFIG.CURRENT_WEEK     = initialInfo.week;
+      window.APP_CONFIG.CURRENT_SEMESTER = initialInfo.semester || window.APP_CONFIG.CURRENT_SEMESTER;
+    }
+  } catch (e) {}
 
   // -----------------------------------------------------------------------
   // Public API

@@ -77,13 +77,17 @@ window.UIReviewer = (function() {
     const kpiApproved = document.getElementById('reviewer-kpi-approved');
     const kpiRevision = document.getElementById('reviewer-kpi-revision');
 
-    if (kpiTotal) kpiTotal.innerText = total;
+    if (kpiTotal) kpiTotal.innerText = `${total} bài`;
     if (kpiPending) kpiPending.innerText = pending;
     if (kpiApproved) kpiApproved.innerText = approved;
     if (kpiRevision) kpiRevision.innerText = needRevision;
 
     const badgePending = document.getElementById('badge-pending-count');
     if (badgePending) badgePending.innerText = `${pending} bài`;
+
+    // Cập nhật các thành phần Dashboard mới (chuẩn hóa an toàn & trực quan)
+    updateCommandDeckAndKPIs(user, deptPlans, isBGH);
+    renderActionQueue(deptPlans);
 
     populateTeacherFilter(deptPlans);
     populateWeekFilter();
@@ -993,6 +997,325 @@ window.UIReviewer = (function() {
     renderReviewerDashboard();
   }
 
+  // =========================================================================
+  // BỔ SUNG: DASHBOARD QUẢN TRỊ CHUYÊN MÔN, ACTION QUEUE & PHÁP LÝ BGD&ĐT
+  // =========================================================================
+
+  function updateCommandDeckAndKPIs(user, deptPlans, isBGH) {
+    // 1. Tên tổ & Người điều hành
+    const deptTitleEl = document.getElementById('reviewer-dept-title');
+    const headNameEl = document.getElementById('reviewer-head-name');
+    if (deptTitleEl) {
+      deptTitleEl.innerText = isBGH ? 'Toàn Trường (Ban Giám Hiệu)' : (user.departmentName || 'Tổ KHTN - Công nghệ');
+    }
+    if (headNameEl) {
+      headNameEl.innerText = `${user.name} (${user.roleLabel || 'Tổ trưởng'})`;
+    }
+
+    // 2. Thông tin tuần học
+    const calInfo = window.SchoolCalendar ? window.SchoolCalendar.getCurrentWeekInfo() : null;
+    const currentWeek = calInfo ? calInfo.week : (window.APP_CONFIG && window.APP_CONFIG.CURRENT_WEEK ? window.APP_CONFIG.CURRENT_WEEK : 1);
+    const currentSemester = calInfo ? calInfo.semester : (window.APP_CONFIG && window.APP_CONFIG.CURRENT_SEMESTER ? window.APP_CONFIG.CURRENT_SEMESTER : 'Học kỳ I');
+
+    const cmdAcademicInfo = document.getElementById('reviewer-cmd-academic-info');
+    if (cmdAcademicInfo) {
+      cmdAcademicInfo.innerText = `${currentSemester} • Tuần ${currentWeek}`;
+    }
+
+    // 3. Card Đội ngũ & Chức danh (TT 15/2025)
+    const allUsers = (window.AppStorage && window.AppStorage.getState().users) || (window.APP_CONFIG && window.APP_CONFIG.USERS) || [];
+    const deptTeachers = isBGH 
+      ? allUsers.filter(u => u.role !== 'BGH')
+      : allUsers.filter(u => u.departmentId === (user ? user.departmentId : 'To_KHTN_CN'));
+    
+    const kpiTeachersCount = document.getElementById('reviewer-kpi-teachers-count');
+    if (kpiTeachersCount) kpiTeachersCount.innerText = deptTeachers.length;
+
+    // 4. Card Tiến độ KHBD Tuần hiện tại
+    const weekPlans = deptPlans.filter(p => {
+      if (!p.tuan) return false;
+      if (String(p.tuan) === String(currentWeek)) return true;
+      const weeks = String(p.tuan).split(/[,;-\s]+/).map(w => w.trim()).filter(Boolean);
+      return weeks.includes(String(currentWeek));
+    });
+    const weekTotal = weekPlans.length;
+    const weekApproved = weekPlans.filter(p => p.trangThai === 'DA_DUYET').length;
+    const weekPct = weekTotal > 0 ? Math.round((weekApproved / weekTotal) * 100) : (deptPlans.length > 0 ? Math.round((deptPlans.filter(p => p.trangThai === 'DA_DUYET').length / deptPlans.length) * 100) : 100);
+
+    const kpiWeekTitle = document.getElementById('reviewer-kpi-week-title');
+    if (kpiWeekTitle) kpiWeekTitle.innerText = `Tiến độ KHBD (CV 5512) - Tuần ${currentWeek}`;
+
+    const kpiWeekPct = document.getElementById('reviewer-kpi-week-pct');
+    if (kpiWeekPct) kpiWeekPct.innerText = `${weekPct}%`;
+
+    const kpiWeekFraction = document.getElementById('reviewer-kpi-week-fraction');
+    if (kpiWeekFraction) kpiWeekFraction.innerText = `${weekApproved} / ${weekTotal || deptPlans.length} Giáo án`;
+
+    const kpiWeekBar = document.getElementById('reviewer-kpi-week-bar');
+    if (kpiWeekBar) kpiWeekBar.style.width = `${weekPct}%`;
+
+    // 5. Card Việc cần xử lý ngay
+    const pendingCount = deptPlans.filter(p => p.trangThai === 'CHO_DUYET').length;
+    const kpiActionQueueCount = document.getElementById('reviewer-kpi-action-count');
+    if (kpiActionQueueCount) kpiActionQueueCount.innerText = pendingCount > 0 ? `${pendingCount} bài chờ` : '0 bài chờ';
+  }
+
+  function renderActionQueue(deptPlans) {
+    const queueContainer = document.getElementById('reviewer-action-queue-list');
+    const queueBadge = document.getElementById('reviewer-action-queue-badge');
+    if (!queueContainer) return;
+
+    const pendingPlans = deptPlans.filter(p => p.trangThai === 'CHO_DUYET');
+    if (queueBadge) {
+      queueBadge.innerText = `${pendingPlans.length} mục`;
+      if (pendingPlans.length > 0) {
+        queueBadge.className = 'h-6 px-2.5 rounded-full bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center animate-pulse';
+      } else {
+        queueBadge.className = 'h-6 px-2.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center';
+      }
+    }
+
+    if (pendingPlans.length === 0) {
+      queueContainer.innerHTML = `
+        <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/60 text-emerald-800 text-center space-y-1">
+          <div class="text-2xl">✨</div>
+          <div class="text-xs font-bold font-heading">Không có giáo án nào đang chờ duyệt</div>
+          <p class="text-[11px] text-emerald-600">Toàn bộ kế hoạch bài dạy của tổ đã được rà soát và phê duyệt đúng tiến độ!</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Hiển thị tối đa 3 bài chờ duyệt gần nhất
+    const topPending = pendingPlans.slice(0, 3);
+    queueContainer.innerHTML = topPending.map(p => {
+      const cleanTiet = window.cleanTietPPCT ? window.cleanTietPPCT(p.tietPPCT) : p.tietPPCT;
+      const tietText = cleanTiet ? ` • Tiết ${cleanTiet}` : '';
+      return `
+        <div class="p-3 rounded-xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 transition-all flex items-start gap-2.5 group">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-base">draw</span>
+          </div>
+          <div class="space-y-1 min-w-0 flex-1">
+            <div class="flex items-center justify-between gap-1">
+              <p class="text-xs font-bold text-slate-800 truncate">${p.tieuDe}</p>
+              <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px] shrink-0">Tuần ${p.tuan}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate">
+              GV: <strong>${p.tacGiaTen}</strong> • Môn: ${p.monHoc} (Lớp ${p.lop}${tietText})
+            </p>
+            <div class="pt-1 flex items-center justify-between">
+              <span class="text-[10px] text-slate-400 font-medium">Nộp: ${new Date(p.ngayNop).toLocaleDateString('vi-VN')}</span>
+              <button onclick="window.UIReviewer.openReviewModal('${p.id}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-0.5 cursor-pointer">
+                <span>Ký duyệt ngay</span>
+                <span class="text-xs">➔</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function scrollToPending() {
+    const filterStatus = document.getElementById('reviewer-filter-status');
+    if (filterStatus) {
+      filterStatus.value = 'CHO_DUYET';
+      applyFiltersAndRenderTable();
+    }
+    const tableEl = document.getElementById('reviewer-plans-tbody');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (window.AppToast) {
+      window.AppToast.show('Đang lọc các bài cần ký duyệt gấp trong tổ', 'info');
+    }
+  }
+
+  function scrollToSection(sectionId) {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function exportToExcel() {
+    try {
+      const user = window.AppStorage.getCurrentUser();
+      const allPlans = window.AppStorage.getPlans();
+      const isBGH = user && user.role === 'BGH';
+      const plans = isBGH ? allPlans : allPlans.filter(p => isPlanInDepartment(p, user));
+
+      if (!window.XLSX) {
+        alert('Thư viện Excel chưa được tải xong, vui lòng thử lại sau giây lát!');
+        return;
+      }
+
+      const rows = plans.map((p, idx) => ({
+        'STT': idx + 1,
+        'Tuần': p.tuan,
+        'Giáo viên': p.tacGiaTen,
+        'Môn học': p.monHoc,
+        'Khối/Lớp': `${p.khoi} - ${p.lop}`,
+        'Tiết PPCT': window.cleanTietPPCT ? window.cleanTietPPCT(p.tietPPCT) : p.tietPPCT,
+        'Tên Kế hoạch bài dạy': p.tieuDe,
+        'Ngày nộp': new Date(p.ngayNop).toLocaleDateString('vi-VN'),
+        'Trạng thái': p.trangThai === 'DA_DUYET' ? 'Đã phê duyệt' : (p.trangThai === 'CAN_SUA' ? 'Yêu cầu sửa' : 'Chờ duyệt'),
+        'Điểm CV 5512': (p.danhGia && p.danhGia.tongDiem) ? p.danhGia.tongDiem : 'Chưa chấm',
+        'Người duyệt': (p.danhGia && p.danhGia.nguoiDuyetTen) ? p.danhGia.nguoiDuyetTen : '',
+        'Nhận xét': (p.danhGia && p.danhGia.nhanXetChung) ? p.danhGia.nhanXetChung : ''
+      }));
+
+      const ws = window.XLSX.utils.json_to_sheet(rows);
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, "BaoCao_KHBD");
+      
+      const fileName = `BaoCao_KHBD_${user ? (user.departmentId || 'To') : 'To'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      window.XLSX.writeFile(wb, fileName);
+
+      if (window.AppToast) {
+        window.AppToast.show(`Đã xuất báo cáo Excel thành công: <b>${fileName}</b>`, 'success');
+      }
+    } catch (e) {
+      alert('Có lỗi khi xuất file Excel: ' + e.message);
+    }
+  }
+
+  const LEGAL_DOCS_DATA = {
+    'TT15': {
+      title: 'Thông tư 15/2025/TT-BGDĐT (Mới ban hành)',
+      sub: 'Quy định mã số, tiêu chuẩn chức danh nghề nghiệp và bổ nhiệm, xếp lương giáo viên THCS công lập',
+      icon: 'gavel',
+      content: `
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900">
+            <strong>📌 Điểm mới cốt lõi theo Thông tư 15/2025/TT-BGDĐT:</strong>
+            <p class="mt-1">Quy định chi tiết tiêu chuẩn chức danh nghề nghiệp giáo viên THCS thành 3 hạng: <strong>Hạng I (Mã số: V.07.04.30)</strong>, <strong>Hạng II (Mã số: V.07.04.31)</strong> và <strong>Hạng III (Mã số: V.07.04.32)</strong>.</p>
+          </div>
+          <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">1. Phân định nhiệm vụ chuyên môn theo từng Hạng:</h4>
+          <ul class="list-disc pl-5 space-y-1.5 text-xs text-slate-600">
+            <li><strong>Giáo viên THCS Hạng I (GVCC):</strong> Chủ trì sinh hoạt chuyên môn theo nghiên cứu bài học cụm trường; hướng dẫn giáo viên tập sự; thẩm định kế hoạch giáo dục và đề kiểm tra định kỳ; tham gia hội đồng chấm thi GVDG hoặc thẩm định SGK/học liệu số.</li>
+            <li><strong>Giáo viên THCS Hạng II (GVC):</strong> Phụ trách kế hoạch giáo dục tổ chuyên môn; báo cáo viên các chuyên đề đổi mới phương pháp giáo dục STEM/chuyển đổi số; chủ trì xây dựng ngân hàng ma trận đề kiểm tra định kỳ.</li>
+            <li><strong>Giáo viên THCS Hạng III:</strong> Đạt chuẩn đào tạo cử nhân sư phạm; thực hiện tốt kế hoạch giáo dục cá nhân và dạy học thực nghiệm theo chương trình GDPT 2018.</li>
+          </ul>
+          <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">2. Khuyến nghị cho Tổ trưởng chuyên môn:</h4>
+          <p class="text-xs text-slate-600">Căn cứ cơ cấu tổ viên để phân công giáo viên Hạng I, II làm nòng cốt trong các buổi sinh hoạt NCBH (Khoản 2 Điều 14 TT 32) và thẩm định Kế hoạch bài dạy chuẩn CV 5512.</p>
+        </div>
+      `
+    },
+    'PL1': {
+      title: 'Phụ lục I - Công văn 5512/BGDĐT',
+      sub: 'Kế hoạch dạy học môn học của tổ chuyên môn (Năm học 2026 - 2027)',
+      icon: 'article',
+      content: `
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <strong>Cấu trúc Phụ lục I - Kế hoạch dạy học môn học:</strong>
+            <p class="mt-1 text-xs text-slate-600">Bao gồm khung phân phối chương trình cả năm, phân định rõ số tiết cho từng mạch nội dung, bài học, chủ đề STEM và kiểm tra đánh giá định kỳ.</p>
+          </div>
+          <table class="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden">
+            <thead class="bg-slate-100 font-bold text-slate-700">
+              <tr><th class="p-2 border">STT</th><th class="p-2 border">Bài học / Chuyên đề</th><th class="p-2 border">Số tiết</th><th class="p-2 border">Tuần</th><th class="p-2 border">Thiết bị dạy học</th><th class="p-2 border">Địa điểm</th></tr>
+            </thead>
+            <tbody class="divide-y text-slate-600">
+              <tr><td class="p-2 border text-center">1</td><td class="p-2 border">Bài 1: Mở đầu & Phương pháp KHTN</td><td class="p-2 border text-center">4</td><td class="p-2 border text-center">1 - 2</td><td class="p-2 border">Dụng cụ thí nghiệm đo lường</td><td class="p-2 border">Phòng thực hành</td></tr>
+              <tr><td class="p-2 border text-center">2</td><td class="p-2 border">Bài 2: Tốc độ chuyển động</td><td class="p-2 border text-center">5</td><td class="p-2 border text-center">3 - 4</td><td class="p-2 border">Đồng hồ hiện số, cổng quang điện</td><td class="p-2 border">Lớp học</td></tr>
+            </tbody>
+          </table>
+          <p class="text-xs text-slate-500 italic">* Các thầy cô có thể mở các bản Phụ lục 3 chi tiết cho từng khối lớp 6, 7, 8, 9 trong thư mục <code>PL3/</code> của hệ thống.</p>
+        </div>
+      `
+    },
+    'PL2': {
+      title: 'Phụ lục II - Công văn 5512/BGDĐT',
+      sub: 'Kế hoạch tổ chức các hoạt động giáo dục của tổ chuyên môn',
+      icon: 'event_note',
+      content: `
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+            <strong>Mục đích:</strong> Phối hợp tổ chức các hoạt động giáo dục ngoài giờ chính khóa, câu lạc bộ STEM, ngày hội khoa học kỹ thuật và trải nghiệm hướng nghiệp.
+          </div>
+          <ul class="list-disc pl-5 space-y-1.5 text-xs text-slate-600">
+            <li>Khối 6 & 7: Hoạt động trải nghiệm phân loại rác thải và làm sản phẩm tái chế.</li>
+            <li>Khối 8 & 9: Ngày hội STEM - Tên lửa nước và xe thế năng, báo cáo dự án KHKT cấp trường.</li>
+            <li>Thời gian thực hiện: Xen kẽ các tuần chẵn trong học kỳ theo kế hoạch nhà trường.</li>
+          </ul>
+        </div>
+      `
+    },
+    'PL4': {
+      title: 'Phụ lục IV - Công văn 5512/BGDĐT (Khung KHBD Chuẩn)',
+      sub: 'Khung Kế hoạch bài dạy chuẩn 4 hoạt động áp dụng cho giáo viên THCS',
+      icon: 'task',
+      content: `
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
+            <strong>Chuỗi 4 hoạt động học tập cốt lõi theo Công văn 5512/BGDĐT:</strong>
+          </div>
+          <div class="space-y-2 text-xs text-slate-700">
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <strong class="text-blue-700">1. Hoạt động 1: Xác định vấn đề / Khởi động</strong>
+              <p class="text-slate-500 mt-0.5">Tạo mâu thuẫn nhận thức hoặc khơi gợi sự hứng thú của học sinh.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <strong class="text-emerald-700">2. Hoạt động 2: Hình thành kiến thức mới / Giải quyết vấn đề</strong>
+              <p class="text-slate-500 mt-0.5">Học sinh tự khám phá, làm thí nghiệm, thảo luận nhóm để chiếm lĩnh tri thức.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <strong class="text-purple-700">3. Hoạt động 3: Luyện tập</strong>
+              <p class="text-slate-500 mt-0.5">Hệ thống hóa kiến thức và giải bài tập củng cố ngay tại lớp.</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <strong class="text-amber-700">4. Hoạt động 4: Vận dụng</strong>
+              <p class="text-slate-500 mt-0.5">Vận dụng kiến thức bài học giải quyết các tình huống thực tiễn đời sống.</p>
+            </div>
+          </div>
+        </div>
+      `
+    },
+    'CV1315': {
+      title: 'Công văn 1315/BGDĐT - Sinh hoạt chuyên môn theo NCBH',
+      sub: 'Quy trình 4 bước sinh hoạt chuyên môn theo nghiên cứu bài học và tiêu chí phân tích',
+      icon: 'school',
+      content: `
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-xs">
+            <strong>Quy trình 4 bước Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH):</strong>
+          </div>
+          <ol class="list-decimal pl-5 space-y-1.5 text-xs text-slate-600">
+            <li><strong>Bước 1 - Xây dựng bài học minh họa:</strong> Tổ chuyên môn họp bàn, thống nhất lựa chọn chủ đề/bài học, phân công giáo viên thiết kế KHBD.</li>
+            <li><strong>Bước 2 - Tổ chức dạy minh họa & dự giờ:</strong> Tập trung quan sát hoạt động học của học sinh (sự tham gia, khó khăn, phản ứng), không đánh giá giáo viên.</li>
+            <li><strong>Bước 3 - Phân tích bài học:</strong> Người dạy chia sẻ cảm nhận; các đồng nghiệp trao đổi về minh chứng học tập của học sinh và rút ra giải pháp điều chỉnh.</li>
+            <li><strong>Bước 4 - Vận dụng vào thực tế:</strong> Giáo viên trong tổ áp dụng các kinh nghiệm, giải pháp đã thống nhất vào các tiết dạy hàng ngày trên lớp.</li>
+          </ol>
+        </div>
+      `
+    }
+  };
+
+  function openLegalDocModal(docId) {
+    const doc = LEGAL_DOCS_DATA[docId];
+    if (!doc) return;
+
+    const modal = document.getElementById('modal-legal-doc');
+    const titleEl = document.getElementById('modal-legal-doc-title');
+    const subEl = document.getElementById('modal-legal-doc-sub');
+    const iconEl = document.getElementById('modal-legal-doc-icon');
+    const bodyEl = document.getElementById('modal-legal-doc-body');
+
+    if (titleEl) titleEl.innerText = doc.title;
+    if (subEl) subEl.innerText = doc.sub;
+    if (iconEl) iconEl.innerText = doc.icon || 'description';
+    if (bodyEl) bodyEl.innerHTML = doc.content;
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeLegalDocModal() {
+    const modal = document.getElementById('modal-legal-doc');
+    if (modal) modal.classList.add('hidden');
+  }
+
   return {
     renderReviewerDashboard,
     applyFiltersAndRenderTable,
@@ -1014,6 +1337,11 @@ window.UIReviewer = (function() {
     updateBatchItemDecision,
     toggleBatchSignatureMode,
     applyBatchReviewResults,
-    quickApproveSelected
+    quickApproveSelected,
+    scrollToPending,
+    scrollToSection,
+    exportToExcel,
+    openLegalDocModal,
+    closeLegalDocModal
   };
 })();
