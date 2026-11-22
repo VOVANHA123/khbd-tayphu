@@ -26,7 +26,12 @@ window.UITeacher = (function() {
     }
 
     const allPlans = window.AppStorage.getPlans();
-    const myPlans = allPlans.filter(p => p.tacGiaId === user.id);
+    // Khớp tác giả theo id hoặc theo tên giáo viên, luôn sắp xếp bài mới nhất lên trên đầu
+    const myPlans = allPlans.filter(p => 
+      p.tacGiaId === user.id || 
+      (p.tacGiaTen && user.name && p.tacGiaTen.trim().toLowerCase() === user.name.trim().toLowerCase())
+    );
+    myPlans.sort((a, b) => new Date(b.ngayNop || 0) - new Date(a.ngayNop || 0));
 
     // Tính toán KPI
     const total = myPlans.length;
@@ -213,6 +218,10 @@ window.UITeacher = (function() {
         const res = await window.DriveAPI.deletePlan(planId);
         window.AppToast.show(res.message || 'Đã xóa Kế hoạch bài dạy và chuyển tệp Drive vào thùng rác!', 'success');
         renderTeacherDashboard();
+      // Kích hoạt đồng bộ nền tức thì lên hệ thống
+      if (window.AppController && window.AppController.triggerManualSync) {
+        window.AppController.triggerManualSync();
+      }
       } catch (err) {
         alert(err.message);
       }
@@ -230,6 +239,10 @@ window.UITeacher = (function() {
       window.AppStorage.clearAllPlans();
       window.AppToast.show('Đã làm trống toàn bộ Kế hoạch bài dạy. Thầy/Cô có thể bắt đầu nộp mới!', 'success');
       renderTeacherDashboard();
+      // Kích hoạt đồng bộ nền tức thì lên hệ thống
+      if (window.AppController && window.AppController.triggerManualSync) {
+        window.AppController.triggerManualSync();
+      }
       if (window.UIReviewer && window.UIReviewer.renderReviewerDashboard) {
         window.UIReviewer.renderReviewerDashboard();
       }
@@ -261,13 +274,14 @@ window.UITeacher = (function() {
     const fileInput = document.getElementById('upload-file-input');
     if (fileInput) fileInput.value = '';
 
-    // Điền tuần dạy (hỗ trợ cả dạng số đơn hoặc chuỗi '1, 2', '2, 3')
+    // Điền tuần dạy (hỗ trợ cả dạng số đơn hoặc chuỗi '1, 2', '2, 3') - Mặc định theo tuần thực tế hiện tại
+    const currentWeekVal = (window.APP_CONFIG && window.APP_CONFIG.CURRENT_WEEK) || 12;
     const tuanInput = document.getElementById('upload-tuan');
     if (tuanInput) {
       if (tuanInput.tagName === 'SELECT') {
-        populateWeekSelectOptions('upload-tuan', 3);
+        populateWeekSelectOptions('upload-tuan', currentWeekVal);
       } else {
-        tuanInput.value = '3';
+        tuanInput.value = String(currentWeekVal);
       }
     }
 
@@ -641,6 +655,10 @@ window.UITeacher = (function() {
         );
       }
       renderTeacherDashboard();
+      // Kích hoạt đồng bộ nền tức thì lên hệ thống
+      if (window.AppController && window.AppController.triggerManualSync) {
+        window.AppController.triggerManualSync();
+      }
     } catch (err) {
       console.error('Lỗi khi nộp bài:', err);
       let errorMsg = 'Lỗi không xác định';

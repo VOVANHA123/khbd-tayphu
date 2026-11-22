@@ -189,9 +189,14 @@ window.DriveAPI = (function() {
   async function uploadPlan(payload) {
     const url = window.AppStorage.getGasUrl();
 
-    // CHIẾN LƯỢC AN TOÀN TUYỆT ĐỐI: Luôn lưu vào LocalStorage trước để không bao giờ bị mất bài
+    // BẢO VỆ BỘ NHỚ TRÌNH DUYỆT (LocalStorage): Tuyệt đối KHÔNG lưu fileBase64 nặng vào LocalStorage
+    // Tách riêng payload lưu trữ (nhẹ, an toàn) và payload gửi API (có Base64)
+    const planForStorage = { ...payload };
+    delete planForStorage.fileBase64;
+    delete planForStorage.fileMimeType;
+
     const localPlan = window.AppStorage.addOrUpdatePlan({
-      ...payload,
+      ...planForStorage,
       id: payload.id || ('KHBD_' + Date.now()),
       ngayNop: payload.ngayNop || new Date().toISOString(),
       trangThai: payload.trangThai || 'CHO_DUYET',
@@ -206,7 +211,7 @@ window.DriveAPI = (function() {
       return { status: 'success', plan: localPlan, mode: 'DEMO' };
     }
 
-    // Gửi lên Google Apps Script Live kèm bộ ngắt thời gian Timeout 12 giây
+    // Gửi lên Google Apps Script Live kèm bộ ngắt thời gian Timeout 60 giây (đủ cho file lớn)
     try {
       const body = JSON.stringify({
         action: 'uploadPlan',
@@ -214,7 +219,7 @@ window.DriveAPI = (function() {
       });
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -227,17 +232,17 @@ window.DriveAPI = (function() {
 
       const result = await response.json();
       if (result && result.status === 'success' && result.plan) {
-        // Cập nhật lại cache cục bộ với thông tin Drive từ Cloud
+        // Cập nhật lại cache cục bộ với thông tin Drive từ Cloud (loại bỏ Base64 để chống tràn bộ nhớ)
         const updated = window.AppStorage.addOrUpdatePlan({
-          ...payload,
+          ...planForStorage,
           id: result.plan.id || localPlan.id,
           driveFileId: result.plan.driveFileId || '',
           driveViewUrl: result.plan.driveViewUrl || payload.docsUrl || '',
           driveDownloadUrl: result.plan.driveDownloadUrl || '#',
-          trangThai: 'CHO_DUYET',
+          trangThai: result.plan.trangThai || 'CHO_DUYET',
           ngayNop: result.plan.ngayNop || localPlan.ngayNop
         });
-        return { status: 'success', plan: updated, message: 'Đã lưu lên Google Drive thành công!' };
+        return { status: 'success', plan: updated, message: 'Đã lưu lên Google Drive & Google Sheets thành công!' };
       }
 
       // Trường hợp Apps Script trả về lỗi nội bộ nhưng đã lưu cục bộ an toàn

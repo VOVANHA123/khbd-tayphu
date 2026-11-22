@@ -495,7 +495,16 @@ function getAllData() {
       monHoc: String(row[3] || ''),
       khoi: String(row[4] || ''),
       lop: String(row[5] || ''),
-      tuan: Number(row[6] || 1),
+      tuan: (function() {
+        const rawW = row[6];
+        if (typeof rawW === 'number' && !isNaN(rawW) && rawW > 0) return rawW;
+        if (rawW !== undefined && rawW !== null && String(rawW).trim() !== '') {
+          const s = String(rawW).replace(/^Tuần\s*/i, '').trim();
+          if (/^\d+$/.test(s)) return parseInt(s, 10);
+          return s; // Giữ nguyên chuỗi dải tuần (VD: '1, 2' hoặc '2, 3')
+        }
+        return 1;
+      })(),
       hocKy: String(row[7] || ''),
       namHoc: String(row[8] || ''),
       tacGiaId: authorId,

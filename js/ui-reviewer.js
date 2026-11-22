@@ -166,6 +166,15 @@ window.UIReviewer = (function() {
       );
     }
 
+    // Luôn sắp xếp bài mới nhất lên trên đầu, ưu tiên các bài CHO_DUYET
+    plans.sort((a, b) => {
+      if (filterStatus === 'ALL') {
+        if (a.trangThai === 'CHO_DUYET' && b.trangThai !== 'CHO_DUYET') return -1;
+        if (a.trangThai !== 'CHO_DUYET' && b.trangThai === 'CHO_DUYET') return 1;
+      }
+      return new Date(b.ngayNop || 0) - new Date(a.ngayNop || 0);
+    });
+
     renderReviewerTable(plans);
   }
 
@@ -278,11 +287,11 @@ window.UIReviewer = (function() {
           <td class="px-4 py-3">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
-                ${p.tacGiaTen.substring(0, 1)}
+                ${(p.tacGiaTen || 'GV').trim().substring(0, 1)}
               </div>
               <div>
-                <div class="font-semibold text-slate-800 text-sm">${p.tacGiaTen}</div>
-                <div class="text-[11px] text-slate-500">${p.toBoMonTen}</div>
+                <div class="font-semibold text-slate-800 text-sm">${p.tacGiaTen || 'Chưa rõ tác giả'}</div>
+                <div class="text-[11px] text-slate-500">${p.toBoMonTen || 'Tổ chuyên môn'}</div>
               </div>
             </div>
           </td>

@@ -13,9 +13,9 @@ window.APP_CONFIG = {
   TOTAL_WEEKS: 35,
 
   // Thông tin phiên bản & Quản trị viên hệ thống
-  APP_VERSION: 'v2.5.2',
-  APP_VERSION_NAME: 'v2.5.2 - Đồng Bộ Đám Mây & Đổi Mật Khẩu Đa Thiết Bị',
-  RELEASE_DATE: '12/09/2026',
+  APP_VERSION: 'v2.5.3',
+  APP_VERSION_NAME: 'v2.5.3 - Đồng Bộ Tức Thì & Tối Ưu Nộp Bài Đám Mây',
+  RELEASE_DATE: '22/11/2026',
   ADMIN_INFO: {
     name: 'Võ Văn Hà',
     title: 'Giáo viên THCS Tây Phú',

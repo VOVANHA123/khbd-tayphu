@@ -151,10 +151,15 @@ window.AppStorage = (function() {
       }
 
       // Tự động dọn dẹp các link demo giả mạo cũ để tránh lỗi "Rất tiếc, tệp không tồn tại"
+      // và dọn sạch Base64 nặng để giải phóng bộ nhớ LocalStorage
       if (parsed.plans && Array.isArray(parsed.plans)) {
         parsed.plans.forEach(p => {
           if (p.driveViewUrl && (p.driveViewUrl.includes('demo') || p.driveViewUrl.includes('/u/1/'))) {
             p.driveViewUrl = '';
+            stateNeedsSave = true;
+          }
+          if (p.fileBase64) {
+            delete p.fileBase64;
             stateNeedsSave = true;
           }
         });
@@ -518,20 +523,32 @@ window.AppStorage = (function() {
     if (!deptId) deptId = 'To_KHTN_CN';
     if (!deptName) deptName = 'Tổ Khoa học Tự nhiên - Công nghệ';
 
+    // Chuẩn hóa tuần an toàn, không để thành null
+    let cleanTuan = plan.tuan;
+    if (cleanTuan === undefined || cleanTuan === null || cleanTuan === '' || cleanTuan === 0) {
+      cleanTuan = (existingLocal && existingLocal.tuan) || 1;
+    }
+    if (typeof cleanTuan === 'string') {
+      cleanTuan = cleanTuan.replace(/^Tuần\s*/i, '').trim() || 1;
+    }
+
     return {
       ...plan,
+      tuan: cleanTuan,
       tietPPCT: cleanTietPPCT(plan.tietPPCT || (existingLocal && existingLocal.tietPPCT) || ''),
       toBoMonId: deptId,
       toBoMonTen: deptName,
-      fileBase64: (existingLocal && existingLocal.fileBase64) || plan.fileBase64 || null,
-      fileMimeType: (existingLocal && existingLocal.fileMimeType) || plan.fileMimeType || null
+      fileBase64: null, // Không lưu Base64 vào localStorage để chống tràn bộ nhớ 5MB
+      fileMimeType: plan.fileMimeType || (existingLocal && existingLocal.fileMimeType) || null
     };
   }
 
   // Thao tác với Kế hoạch bài dạy (KHBD)
   function getPlans() {
     const rawPlans = getState().plans || [];
-    return rawPlans.map(p => normalizePlan(p));
+    const normalized = rawPlans.map(p => normalizePlan(p));
+    // Luôn sắp xếp kế hoạch mới nhất lên đầu theo thời gian nộp
+    return normalized.sort((a, b) => new Date(b.ngayNop || 0) - new Date(a.ngayNop || 0));
   }
 
   function getPlanById(id) {
@@ -644,6 +661,9 @@ window.AppStorage = (function() {
           }
         }
       });
+
+      // Luôn sắp xếp danh sách mới nhất lên đầu theo thời gian nộp
+      mergedPlans.sort((a, b) => new Date(b.ngayNop || 0) - new Date(a.ngayNop || 0));
 
       // So sánh để phát hiện thay đổi
       if (JSON.stringify(state.plans) !== JSON.stringify(mergedPlans)) {
